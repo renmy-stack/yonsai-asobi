@@ -8,15 +8,15 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e0f2f1">
-<link rel="stylesheet" href="common.css?v=202609221934">
-<link rel="stylesheet" href="game.css?v=202609221934">
+<link rel="stylesheet" href="common.css?v=202609221945">
+<link rel="stylesheet" href="game.css?v=202609221945">
 <style>
   body { background: linear-gradient(180deg, #e0f2f1 0%, #f4fffd 100%); }
   .choices { flex: 1; grid-template-columns: repeat(var(--n, 3), 1fr); }
   .choice { flex-direction: column; }
   .choice .face { width: var(--sz, 80%); height: var(--sz, 80%); }
-  .choice .group { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; width: 90%; height: 90%; }
-  .choice .group .face { width: 45%; height: 30%; }
+  .choice .group { display: flex; flex-wrap: wrap; align-content: center; align-items: center; justify-content: center; gap: 2px; width: 90%; height: 90%; }
+  .choice .group .face { width: 44%; height: auto; aspect-ratio: 1; }   /* 行の高さを絵に合わせ、上下に散らばらないように */
   .choice .group .face img { width: 100%; height: 100%; object-fit: contain; }
   .choice .group .face.emoji { display: flex; align-items: center; justify-content: center; font-size: min(8vmin, 36px); }
   .choice .tag {
@@ -41,8 +41,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609221934"></script>
-<script src="catalog.js?v=202609221934"></script>
+<script src="common.js?v=202609221945"></script>
+<script src="catalog.js?v=202609221945"></script>
 <script>
 (() => {
   'use strict';

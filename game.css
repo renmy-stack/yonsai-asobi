@@ -4,7 +4,7 @@
 /* 上部の問題文 */
 .question {
   text-align: center;
-  font-size: 22px; font-weight: bold; color: #345;
+  font-size: min(22px, 5.4vw); font-weight: bold; color: #345;   /* 狭い画面では少し小さくして1行に */
   min-height: 30px;
   padding: 0 56px;              /* 左右のボタンと重ならないように */
 }

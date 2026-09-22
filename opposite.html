@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#f3e5f5">
-<link rel="stylesheet" href="common.css?v=202609221934">
-<link rel="stylesheet" href="game.css?v=202609221934">
+<link rel="stylesheet" href="common.css?v=202609221945">
+<link rel="stylesheet" href="game.css?v=202609221945">
 <style>
   body { background: linear-gradient(180deg, #f3e5f5 0%, #fbf5fc 100%); }
   #word { flex: 0.6; min-height: 0; display: flex; align-items: center; justify-content: center; font-size: min(11vw, 52px); font-weight: bold; color: #6a1b9a; }
@@ -42,8 +42,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609221934"></script>
-<script src="catalog.js?v=202609221934"></script>
+<script src="common.js?v=202609221945"></script>
+<script src="catalog.js?v=202609221945"></script>
 <script>
 (() => {
   'use strict';
@@ -52,7 +52,7 @@
   const PAIRS = [
     { a: 'おおきい', b: 'ちいさい', draw: (which, p) => `<div class="pic" style="--sz:${which === 0 ? 90 : 35}%"><img src="${p.set.dir}/${p.item.id}.png"></div>` },
     { a: 'ながい',   b: 'みじかい', draw: (which) => `<div class="pic"><div class="bar" style="--w:${which === 0 ? 90 : 30}%"></div></div>` },
-    { a: 'おおい',   b: 'すくない', draw: (which, p) => `<div class="pic" style="flex-wrap:wrap;gap:2px">${('<img src="' + p.set.dir + '/' + p.item.id + '.png" style="width:30%;height:30%">').repeat(which === 0 ? 6 : 1)}</div>` },
+    { a: 'おおい',   b: 'すくない', draw: (which, p) => `<div class="pic" style="flex-wrap:wrap;align-content:center;gap:2px">${('<img src="' + p.set.dir + '/' + p.item.id + '.png" style="width:30%;height:30%">').repeat(which === 0 ? 6 : 1)}</div>` },
     { a: 'たかい',   b: 'ひくい',   draw: (which) => `<div class="pic ${which === 0 ? 'top' : 'bottom'}">🐦</div>` },
     { a: 'あかるい', b: 'くらい',   draw: (which) => `<div class="pic ${which === 0 ? 'bright' : 'dark'}">${which === 0 ? '☀️' : '🌙'}</div>` },
     { a: 'はやい',   b: 'おそい',   draw: (which) => `<div class="pic" style="overflow:hidden"><span class="run" style="--dur:${which === 0 ? '1s' : '5s'}">${which === 0 ? '🐇' : '🐢'}</span></div>` },

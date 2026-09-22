@@ -8,15 +8,15 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff8e1">
-<link rel="stylesheet" href="common.css?v=202609221934">
-<link rel="stylesheet" href="game.css?v=202609221934">
+<link rel="stylesheet" href="common.css?v=202609221945">
+<link rel="stylesheet" href="game.css?v=202609221945">
 <style>
   body { background: linear-gradient(180deg, #fff8e1 0%, #fffdf5 100%); }
   .choices.two { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
   @media (orientation: landscape) { .choices.two { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; } }
   .choice { padding: 8px; }
   .choice .face { width: var(--sz, 84%); height: var(--sz, 84%); }
-  .group { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; width: 100%; height: 100%; }
+  .group { display: flex; flex-wrap: wrap; align-content: center; align-items: center; justify-content: center; gap: 4px; width: 100%; height: 100%; }
   .group .face { width: 30%; height: 45%; }
   .group .face img { width: 100%; height: 100%; object-fit: contain; }
   .group .face.emoji { display: flex; align-items: center; justify-content: center; font-size: min(10vmin, 48px); }
@@ -35,8 +35,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609221934"></script>
-<script src="catalog.js?v=202609221934"></script>
+<script src="common.js?v=202609221945"></script>
+<script src="catalog.js?v=202609221945"></script>
 <script>
 (() => {
   'use strict';

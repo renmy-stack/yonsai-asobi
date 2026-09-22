@@ -8,11 +8,11 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff3e0">
-<link rel="stylesheet" href="common.css?v=202609221934">
+<link rel="stylesheet" href="common.css?v=202609221945">
 <style>
   body { background: linear-gradient(180deg, #fff3e0 0%, #fffaf3 100%); }
   #stage { display: flex; flex-direction: column; gap: 8px; }
-  #pics { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  #pics { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; align-content: center; }
   .pic {
     width: 44px; height: 44px; border-radius: 12px; background: #fff;
     box-shadow: 0 3px 0 rgba(0,0,0,.12); padding: 4px;
@@ -29,7 +29,7 @@
     box-shadow: 0 6px 0 rgba(0,0,0,.08);
     touch-action: none;
   }
-  .tools { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .tools { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; align-content: center; }
   .swatch {
     width: 40px; height: 40px; border-radius: 50%;
     border: 4px solid #fff; box-shadow: 0 2px 0 rgba(0,0,0,.15);
@@ -54,7 +54,7 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609221934"></script>
+<script src="common.js?v=202609221945"></script>
 <script>
 (() => {
   'use strict';

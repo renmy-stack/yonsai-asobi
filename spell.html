@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff8e1">
-<link rel="stylesheet" href="common.css?v=202609221934">
-<link rel="stylesheet" href="game.css?v=202609221934">
+<link rel="stylesheet" href="common.css?v=202609221945">
+<link rel="stylesheet" href="game.css?v=202609221945">
 <style>
   body { background: linear-gradient(180deg, #fff8e1 0%, #fffdf5 100%); }
   #pic { flex: 0.9; min-height: 0; display: flex; align-items: center; justify-content: center; font-size: min(28vmin, 140px); line-height: 1; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
@@ -18,7 +18,7 @@
   #slots { display: flex; justify-content: center; gap: 8px; }
   .slot { width: min(16vw, 72px); height: min(16vw, 72px); border-radius: 14px; border: 4px dashed #ffb74d; background: #fff; display: flex; align-items: center; justify-content: center; font-size: min(9vw, 40px); font-weight: bold; color: #345; }
   .slot.filled { border-style: solid; background: #fff6b3; }
-  #tiles { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+  #tiles { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; align-content: center; align-items: center; justify-content: center; gap: 10px; }
   .tile { width: min(18vw, 80px); height: min(18vw, 80px); border-radius: 16px; background: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.12); display: flex; align-items: center; justify-content: center; font-size: min(10vw, 44px); font-weight: bold; color: #345; }
   .tile.used { visibility: hidden; }
 </style>
@@ -38,8 +38,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609221934"></script>
-<script src="words.js?v=202609221934"></script>
+<script src="common.js?v=202609221945"></script>
+<script src="words.js?v=202609221945"></script>
 <script>
 (() => {
   'use strict';
