@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>おきがえ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fce4ec">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #fce4ec 0%, #ffffff 100%); }
+
+  #top { flex: 0.9; min-height: 0; display: flex; align-items: center; gap: 10px; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); padding: 8px; }
+  #kid { width: 28%; height: 100%; display: flex; align-items: center; justify-content: center; } #kid img { width: 100%; height: 100%; object-fit: contain; } #kid.emoji { font-size: 60px; }
+  #worn { flex: 1; height: 100%; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  #worn .pic { width: min(14vw, 64px); height: min(14vw, 64px); display: flex; align-items: center; justify-content: center; } #worn .pic img { width: 100%; height: 100%; object-fit: contain; } #worn .pic.emoji { font-size: 32px; }
+  #worn .arrow { font-size: 18px; color: #999; }
+  .choice .pic { width: 80%; height: 80%; display: flex; align-items: center; justify-content: center; } .choice .pic img { width: 100%; height: 100%; object-fit: contain; } .choice .pic.emoji { font-size: min(14vmin, 64px); }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">👕</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">つぎは なにを きる？</div>
+  <div class="stars" id="stars"></div>
+  <div id="top"><div id="kid"></div><div id="worn"></div></div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, sayThen, burst, animate, cheer, celebrate, setupStart, setupHome, shuffle, pick } = Baby;
+  const ORDER = [['assets/life/pantsu.png', 'パンツ', '🩲'], ['assets/life/zubon.png', 'ズボン', '👖'], ['assets/life/shatsu.png', 'シャツ', '👕'],
+                 ['assets/words/kutsushita.png', 'くつした', '🧦'], ['assets/words/kutsu.png', 'くつ', '👟'], ['assets/words/boushi.png', 'ぼうし', '🧢']];
+  const kid = document.getElementById('kid'), worn = document.getElementById('worn'), choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  { const im = new Image(); im.src = 'assets/misc/child.png'; im.alt = ''; im.onload = () => kid.appendChild(im); im.onerror = () => { kid.textContent = '🧒'; kid.classList.add('emoji'); }; }
+  const state = { step: 0, opts: [], busy: false, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  function ask() { say('つぎは なにを きる？'); }
+  function show() {
+    state.busy = false;
+    const next = ORDER[state.step];
+    const rest = ORDER.filter((o, i) => i !== state.step);
+    const wrong = shuffle(rest.filter((o, i) => ORDER.indexOf(o) > state.step)).slice(0, 2);
+    while (wrong.length < 2) wrong.push(pick(rest.filter(o => !wrong.includes(o))));
+    state.opts = shuffle([next, ...wrong]);
+    choices.innerHTML = '';
+    state.opts.forEach((o, i) => { const d = document.createElement('div'); d.className = 'choice'; d.dataset.i = i; d.appendChild(Baby.pic(o[0], o[2])); choices.appendChild(d); });
+    Baby.prime([`${next[1]}！`, 'じゅんばんが ちがうよ。 つぎは なにかな？']);
+    ask();
+  }
+  function newRound() { state.step = 0; worn.innerHTML = ''; show(); }
+  choices.addEventListener('pointerdown', (e) => {
+    const d = e.target.closest('.choice'); if (!d || state.busy) return; e.preventDefault();
+    const o = state.opts[Number(d.dataset.i)];
+    burst(e.clientX, e.clientY, 5);
+    if (o === ORDER[state.step]) {
+      state.busy = true; animate(d, 'glow', 700); SFX.correct();
+      if (state.step) { const a = document.createElement('span'); a.className = 'arrow'; a.textContent = '→'; worn.appendChild(a); }
+      worn.appendChild(Baby.pic(o[0], o[2]));
+      state.step++;
+      if (state.step === ORDER.length) {
+        cheer('🎉'); celebrate();
+        sayThen([`${o[1]}！`, 'おきがえ できた！ いってきます！'], { delay: 300 }, () => win(newRound), 600);
+      } else sayThen([Baby.praise(), `${o[1]}！`], { delay: 300 }, show, 300);
+    } else {
+      animate(d, 'shake', 400); SFX.wrong();
+      say('じゅんばんが ちがうよ。 つぎは なにかな？', { delay: 200 });
+    }
+  });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

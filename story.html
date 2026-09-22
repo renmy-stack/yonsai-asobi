@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>おはなしのじゅんばん</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e3f2fd">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e3f2fd 0%, #ffffff 100%); }
+
+  #slots, #cards { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .slot { position: relative; border-radius: 22px; border: 4px dashed #90caf9; background: rgba(255,255,255,.5); display: flex; align-items: center; justify-content: center; min-height: 0; }
+  .slot::before { content: attr(data-n); position: absolute; left: 8px; top: 4px; font-size: 22px; font-weight: bold; color: #1e88e5; }
+  .slot.filled { border-style: solid; background: var(--card); }
+  .card { border-radius: 22px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; min-height: 0; overflow: hidden; }
+  .card.used { visibility: hidden; }
+  .fr { width: 88%; height: 88%; display: flex; align-items: center; justify-content: center; } .fr img { width: 100%; height: 100%; object-fit: contain; } .fr.emoji { font-size: min(14vmin, 64px); }
+  .slot .fr { width: 88%; height: 88%; }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">📖</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">じゅんばんに ならべよう</div>
+  <div class="stars" id="stars"></div>
+  <div id="slots"><div class="slot" data-n="1"></div><div class="slot" data-n="2"></div><div class="slot" data-n="3"></div></div>
+  <div id="cards"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, sayThen, burst, animate, cheer, celebrate, setupStart, setupHome, shuffle, pick } = Baby;
+  const STORIES = [
+    { id: 'seed', frames: [['seed', '🌱'], ['sprout', '🌿'], ['flower', '🌸']], line: 'たねを まいて、 めが でて、 はなが さいた！' },
+    { id: 'egg', frames: [['egg', '🥚'], ['chick', '🐤'], ['hen', '🐔']], line: 'たまごが われて、 ひよこが うまれて、 にわとりに なった！' },
+    { id: 'bug', frames: [['caterpillar', '🐛'], ['cocoon', '🟤'], ['butterfly', '🦋']], line: 'あおむしが さなぎに なって、 ちょうちょに なった！' },
+    { id: 'bread', frames: [['dough', '🫓'], ['oven', '🔥'], ['bread', '🍞']], line: 'こねて、 やいて、 パンが できた！' },
+    { id: 'night', frames: [['bath', '🛁'], ['pajama', '👕'], ['sleep', '😴']], line: 'おふろに はいって、 パジャマを きて、 ねんね！' },
+    { id: 'rain', frames: [['raincloud', '☁️'], ['rain', '🌧️'], ['rainbow', '🌈']], line: 'くもが きて、 あめが ふって、 にじが でた！' },
+  ];
+  const slots = document.getElementById('slots'), cards = document.getElementById('cards');
+  const stars = document.getElementById('stars');
+  const state = { story: null, order: [], placed: [], busy: false, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  const frame = (f) => Baby.pic(`assets/story/${f[0]}.png`, f[1], 'fr');
+  function ask() { say('じゅんばんに ならべよう'); }
+  function newRound() {
+    state.busy = false; state.placed = [];
+    state.story = Baby.fresh('story', () => pick(STORIES), s => s.id);
+    state.order = shuffle([0, 1, 2]);
+    slots.querySelectorAll('.slot').forEach(s => { s.innerHTML = ''; s.classList.remove('filled'); });
+    cards.innerHTML = '';
+    state.order.forEach((fi) => {
+      const c = document.createElement('div'); c.className = 'card'; c.dataset.f = fi;
+      c.appendChild(frame(state.story.frames[fi])); cards.appendChild(c);
+    });
+    Baby.prime([state.story.line, 'じゅんばんが ちがうよ。 もういちど']);
+    ask();
+  }
+  cards.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.card'); if (!c || state.busy || c.classList.contains('used')) return; e.preventDefault();
+    const fi = Number(c.dataset.f);
+    c.classList.add('used');
+    const slot = slots.children[state.placed.length];
+    slot.appendChild(frame(state.story.frames[fi])); slot.classList.add('filled');
+    state.placed.push(fi);
+    SFX.count(state.placed.length); burst(e.clientX, e.clientY, 3);
+    if (state.placed.length === 3) {
+      state.busy = true;
+      if (state.placed.every((v, i) => v === i)) {
+        SFX.correct(); cheer('🎉'); celebrate();
+        sayThen([Baby.praise(), state.story.line], { delay: 300 }, () => win(newRound), 600);
+      } else {
+        SFX.wrong(); animate(slots, 'shake', 400);
+        sayThen('じゅんばんが ちがうよ。 もういちど', { delay: 300 }, () => {
+          state.busy = false; state.placed = [];
+          slots.querySelectorAll('.slot').forEach(s => { s.innerHTML = ''; s.classList.remove('filled'); });
+          cards.querySelectorAll('.card').forEach(x => x.classList.remove('used'));
+        }, 300);
+      }
+    }
+  });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

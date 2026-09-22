@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>はをみがこう</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e0f7fa">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e0f7fa 0%, #ffffff 100%); }
+
+  #mouth { flex: 1; min-height: 0; position: relative; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); overflow: hidden; touch-action: none; }
+  #mouthpic { position: absolute; inset: 6%; display: flex; align-items: center; justify-content: center; }
+  #mouthpic img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  #teethcss { position: absolute; left: 12%; right: 12%; top: 30%; bottom: 30%; border-radius: 40% / 50%; background: #ff8a80; display: none; align-items: center; justify-content: center; gap: 2%; padding: 0 4%; }
+  #teethcss i { flex: 1; height: 40%; background: #fff; border-radius: 6px; }
+  #teethcss.show { display: flex; }
+  .germ { position: absolute; width: 12%; aspect-ratio: 1; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; transition: opacity .2s; }
+  .germ img { width: 100%; height: 100%; object-fit: contain; } .germ.emoji { font-size: min(8vmin, 40px); }
+  #brush { position: absolute; width: 22%; aspect-ratio: 1; transform: translate(-30%, -70%) rotate(-30deg); pointer-events: none; display: none; }
+  #brush.show { display: flex; } #brush img { width: 100%; height: 100%; object-fit: contain; } #brush.emoji { font-size: 60px; }
+  #left { text-align: center; font-size: 22px; font-weight: bold; color: #00838f; min-height: 30px; }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🪥</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">はぶらしで ばいきんを やっつけよう</div>
+  <div class="stars" id="stars"></div>
+  <div id="left"></div>
+  <div id="mouth"><div id="mouthpic"></div><div id="teethcss"><i></i><i></i><i></i><i></i><i></i><i></i></div><div id="brush"></div></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, burst, cheer, celebrate, setupStart, setupHome, tone, noise } = Baby;
+  const mouth = document.getElementById('mouth'), brush = document.getElementById('brush'), left = document.getElementById('left');
+  const stars = document.getElementById('stars');
+  const state = { germs: [], busy: false, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  { const im = new Image(); im.src = 'assets/life/mouth.png'; im.alt = ''; im.onload = () => document.getElementById('mouthpic').appendChild(im); im.onerror = () => document.getElementById('teethcss').classList.add('show'); }
+  { const im = new Image(); im.src = 'assets/life/toothbrush.png'; im.alt = ''; im.onload = () => brush.appendChild(im); im.onerror = () => { brush.textContent = '🪥'; brush.classList.add('emoji'); }; }
+  function newRound() {
+    state.busy = false;
+    mouth.querySelectorAll('.germ').forEach(g => g.remove());
+    const n = [0, 3, 4, 5, 6, 7][Baby.level()];
+    state.germs = [];
+    for (let i = 0; i < n; i++) {
+      const x = 20 + (i + 0.5) / n * 60 + (Math.random() - 0.5) * 6, y = 36 + Math.random() * 28;
+      const g = Baby.pic('assets/life/germ.png', '🦠', 'germ'); g.style.left = `${x}%`; g.style.top = `${y}%`;
+      mouth.appendChild(g); state.germs.push({ el: g, x, y, hp: 10 });
+    }
+    left.textContent = `ばいきん あと ${n}`;
+    Baby.prime(['ぴかぴか！ きれいに なった！']);
+    say('はぶらしを うごかして ばいきんを やっつけよう');
+  }
+  let last = 0;
+  function scrub(e) {
+    const r = mouth.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width * 100, y = (e.clientY - r.top) / r.height * 100;
+    brush.style.left = `${x}%`; brush.style.top = `${y}%`;
+    if (state.busy) return;
+    for (const g of state.germs) {
+      if (g.hp <= 0) continue;
+      if (Math.hypot(g.x - x, (g.y - y) * (r.height / r.width)) < 9) {
+        g.hp--; g.el.style.opacity = 0.3 + g.hp / 10 * 0.7;
+        if (performance.now() - last > 120) { last = performance.now(); noise({ dur: 0.05, gain: 0.08, lowpass: 2500 }); }
+        if (g.hp <= 0) {
+          g.el.remove(); SFX.pop(); burst(e.clientX, e.clientY, 5, ['✨', '💦']);
+          const n = state.germs.filter(x => x.hp > 0).length; left.textContent = n ? `ばいきん あと ${n}` : 'ぴかぴか！';
+          if (!n) { state.busy = true; SFX.correct(); cheer('✨'); celebrate(); Baby.say('ぴかぴか！ きれいに なった！', { delay: 300 }).then(() => win(newRound)); }
+        }
+      }
+    }
+  }
+  mouth.addEventListener('pointerdown', (e) => { e.preventDefault(); brush.classList.add('show'); scrub(e); });
+  mouth.addEventListener('pointermove', (e) => { if (e.buttons === 0 && e.pointerType === 'mouse') return; e.preventDefault(); const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e]; for (const ev of (evs.length ? evs : [e])) scrub(ev); });
+  setupStart(() => setTimeout(newRound, 300));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

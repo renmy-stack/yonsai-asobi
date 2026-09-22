@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>なきごえあて</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fff8e1">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #fff8e1 0%, #ffffff 100%); }
+
+  #who { flex: 0.9; min-height: 0; display: flex; align-items: center; justify-content: center; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); font-size: 60px; }
+  #who .face { width: 40%; height: 85%; } #who .face img { width: 100%; height: 100%; object-fit: contain; }
+  #who .wpic { width: 40%; height: 85%; } #who .wpic img { width: 100%; height: 100%; object-fit: contain; }
+  #who.on { animation: pulse .5s ease-in-out infinite; } @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+  .choice.txt { font-size: min(8vw, 34px); font-weight: bold; color: #345; }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🐔</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">なきごえは どれ？</div>
+  <div class="stars" id="stars"></div>
+  <div id="who"></div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  // [絵, なまえ, なきごえ]
+  const CRIES = [
+    ['assets/animals/dog.png', 'いぬ', 'わんわん'], ['assets/animals/cat.png', 'ねこ', 'にゃーにゃー'], ['assets/animals/elephant.png', 'ぞう', 'ぱおーん'],
+    ['assets/animals/lion.png', 'らいおん', 'がおー'], ['assets/animals/cow.png', 'うし', 'もーもー'], ['assets/animals/frog.png', 'かえる', 'けろけろ'],
+    ['assets/animals/monkey.png', 'さる', 'うきうき'], ['assets/animals/pig.png', 'ぶた', 'ぶーぶー'],
+    ['assets/words/niwatori.png', 'にわとり', 'こけこっこー'], ['assets/words/hiyoko.png', 'ひよこ', 'ぴよぴよ'], ['assets/words/hitsuji.png', 'ひつじ', 'めーめー'],
+    ['assets/words/uma.png', 'うま', 'ひひーん'], ['assets/words/nezumi.png', 'ねずみ', 'ちゅーちゅー'], ['assets/words/ahiru.png', 'あひる', 'がーがー'],
+  ];
+  const who = document.getElementById('who'), choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const state = { target: null, opts: [], mode: 'cry', busy: false, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  const pic = (c) => Baby.pic(c[0], '🐾', 'face');
+  function ask() {
+    if (state.mode === 'cry') say(`${state.target[1]}の なきごえは どれ？`);
+    else { who.classList.add('on'); say(['なんの なきごえ かな？', state.target[2]]).then(() => who.classList.remove('on')); }
+  }
+  function newRound() {
+    state.busy = false;
+    state.mode = Baby.level() >= 2 && Math.random() < 0.5 ? 'who' : 'cry';    // レベル2から「声を聞いて動物を当てる」も
+    const sh = Baby.fresh('cry', () => shuffle(CRIES), a => a[0][1]);
+    state.target = sh[0]; state.opts = shuffle(sh.slice(0, 3));
+    who.innerHTML = '';
+    if (state.mode === 'cry') who.appendChild(pic(state.target)); else who.textContent = '👂';
+    choices.className = 'choices';
+    choices.innerHTML = '';
+    state.opts.forEach((c, i) => {
+      const d = document.createElement('div'); d.className = 'choice'; d.dataset.i = i;
+      if (state.mode === 'cry') { d.classList.add('txt'); d.textContent = c[2]; } else d.appendChild(pic(c));
+      choices.appendChild(d);
+    });
+    Baby.prime([...state.opts.map(c => c[2]), ...state.opts.map(c => c[1]), 'ちがうよ。']);
+    ask();
+  }
+  choices.addEventListener('pointerdown', (e) => {
+    const d = e.target.closest('.choice'); if (!d || state.busy) return; e.preventDefault();
+    const c = state.opts[Number(d.dataset.i)];
+    burst(e.clientX, e.clientY, 5);
+    if (c === state.target) {
+      state.busy = true; animate(d, 'glow', 900); SFX.correct();
+      if (state.mode === 'who') { who.innerHTML = ''; who.appendChild(pic(c)); }
+      sayThen([Baby.praise(), c[1], c[2]], { delay: 300 }, () => win(newRound), 600);
+    } else {
+      animate(d, 'shake', 400); SFX.wrong();
+      if (state.mode === 'cry') say([c[2], `${c[1]}だね`, `${state.target[1]}の なきごえは どれ？`], { delay: 200 });
+      else say(['ちがうよ。', state.target[2]], { delay: 200 });
+    }
+  });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

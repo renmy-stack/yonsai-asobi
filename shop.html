@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>おかいもの</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fff8e1">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #fff8e1 0%, #ffffff 100%); }
+
+  #item { flex: 0.8; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 16px; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  #item .face { width: 30%; height: 80%; } #item .face img { width: 100%; height: 100%; object-fit: contain; }
+  #price { font-size: min(12vw, 56px); font-weight: bold; color: #e65100; }
+  #tray { flex: 0.7; min-height: 70px; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; border-radius: 24px; border: 4px dashed #ffb300; background: rgba(255,255,255,.5); padding: 6px; }
+  .coin { width: min(14vw, 64px); height: min(14vw, 64px); display: flex; align-items: center; justify-content: center; }
+  .coin img { width: 100%; height: 100%; object-fit: contain; } .coin.emoji { font-size: min(10vw, 44px); }
+  #bottom { display: flex; gap: 12px; align-items: stretch; height: min(22vh, 130px); }
+  #pile { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; border-radius: 24px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  #pile .coin { width: min(18vw, 80px); height: min(18vw, 80px); }
+  #pay { width: 32%; border: none; border-radius: 24px; background: #ffd84d; font-size: 24px; font-weight: bold; color: #345; font-family: inherit; box-shadow: 0 6px 0 rgba(0,0,0,.12); touch-action: none; }
+  #pay:active { transform: translateY(3px); }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🛒</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">コインで はらおう</div>
+  <div class="stars" id="stars"></div>
+  <div id="item"><div id="face"></div><div id="price"></div></div>
+  <div id="tray"></div>
+  <div id="bottom"><div id="pile"></div><button id="pay" type="button">はらう</button></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const YEN = ['', 'いちえん', 'にえん', 'さんえん', 'よえん', 'ごえん', 'ろくえん', 'ななえん', 'はちえん'];
+  const face = document.getElementById('face'), price = document.getElementById('price');
+  const tray = document.getElementById('tray'), pile = document.getElementById('pile');
+  const stars = document.getElementById('stars');
+  const state = { item: null, n: 0, paid: 0, busy: false, score: Baby.getLevel() };
+  const coin = () => Baby.pic('assets/misc/coin.png', '🪙', 'coin');
+  pile.appendChild(coin()); pile.appendChild(coin());
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  function ask() { say([`${state.item.item.name}は`, `${YEN[state.n]}`, 'コインを おいて はらおう']); }
+  function newRound() {
+    state.busy = false; state.paid = 0; tray.innerHTML = '';
+    const max = [0, 3, 5, 6, 8, 8][Baby.level()];
+    state.item = Baby.fresh('shop', () => pick(allItems().filter(p => p.set.key === 'foods')), v => v.item.id);
+    state.n = 1 + Math.floor(Math.random() * max);
+    face.innerHTML = ''; face.appendChild(makeFace(state.item.set, state.item.item));
+    price.textContent = `${state.n}えん`;
+    Baby.prime(['ぴったり！ ありがとう！', 'まだ たりないよ', 'おおすぎるよ']);
+    ask();
+  }
+  pile.addEventListener('pointerdown', (e) => {
+    if (state.busy) return; e.preventDefault();
+    if (state.paid >= 9) return;
+    state.paid++;
+    const c = coin(); tray.appendChild(c); animate(c, 'bounce', 400);
+    SFX.count(state.paid); burst(e.clientX, e.clientY, 3);
+  });
+  tray.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.coin'); if (!c || state.busy) return; e.preventDefault();
+    c.remove(); state.paid--; SFX.pop();
+  });
+  document.getElementById('pay').addEventListener('pointerdown', (e) => {
+    e.preventDefault(); if (state.busy) return;
+    if (state.paid === state.n) {
+      state.busy = true; SFX.correct(); burst(e.clientX, e.clientY, 8);
+      sayThen([Baby.praise(), 'ぴったり！ ありがとう！'], { delay: 200 }, () => win(newRound), 600);
+    } else {
+      SFX.wrong(); animate(tray, 'shake', 400);
+      say([state.paid < state.n ? 'まだ たりないよ' : 'おおすぎるよ', `${state.item.item.name}は`, `${YEN[state.n]}`], { delay: 200 });
+    }
+  });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>かぞえてジャンプ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e1f5fe">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e1f5fe 0%, #ffffff 100%); }
+
+  #num { text-align: center; font-size: min(22vw, 110px); font-weight: bold; color: #0277bd; line-height: 1; }
+  #field { flex: 1; min-height: 0; position: relative; border-radius: 28px; background: linear-gradient(180deg, #b3e5fc 0%, #dcedc8 70%, #8bc34a 70%, #8bc34a 100%); overflow: hidden; touch-action: none; }
+  #hero { position: absolute; left: 14%; bottom: 28%; width: 22%; aspect-ratio: 1; transition: transform .12s; }
+  #hero .pic { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; } #hero .pic img { width: 100%; height: 100%; object-fit: contain; } #hero .pic.emoji { font-size: 60px; }
+  #hero.hop { transform: translateY(-18%); }
+  #hero.fly { animation: fly 1.2s ease-in-out forwards; }
+  @keyframes fly { 0% { transform: translate(0, 0); } 50% { transform: translate(130%, -120%); } 100% { transform: translate(260%, 0); } }
+  #rock { position: absolute; left: 50%; bottom: 28%; width: 18%; aspect-ratio: 1; }
+  #rock .pic { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; } #rock .pic img { width: 100%; height: 100%; object-fit: contain; } #rock .pic.emoji { font-size: 50px; }
+  #count { position: absolute; right: 12px; top: 8px; font-size: 40px; font-weight: bold; color: #345; }
+  #go { align-self: center; height: 56px; padding: 0 30px; border: none; border-radius: 28px; background: #ffd84d; font-size: 24px; font-weight: bold; color: #345; font-family: inherit; box-shadow: 0 6px 0 rgba(0,0,0,.12); touch-action: none; }
+  #go.hidden { visibility: hidden; }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🦘</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">かずだけ タッチして ジャンプ！</div>
+  <div class="stars" id="stars"></div>
+  <div id="num"></div>
+  <div id="field"><div id="hero"></div><div id="rock"></div><div id="count">0</div></div>
+  <button id="go" type="button" class="hidden">ジャンプ！</button>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, sayThen, burst, animate, cheer, celebrate, setupStart, setupHome, tone } = Baby;
+  const KAI = ['', 'いっかい', 'にかい', 'さんかい', 'よんかい', 'ごかい', 'ろっかい', 'ななかい', 'はっかい', 'きゅうかい', 'じゅっかい'];
+  const READ = ['', 'いち', 'に', 'さん', 'よん', 'ご', 'ろく', 'なな', 'はち', 'きゅう', 'じゅう'];
+  const num = document.getElementById('num'), field = document.getElementById('field'), hero = document.getElementById('hero'), count = document.getElementById('count'), go = document.getElementById('go');
+  const stars = document.getElementById('stars');
+  hero.appendChild(Baby.pic('assets/icons/zundamon.png', '🟢'));
+  document.getElementById('rock').appendChild(Baby.pic('assets/misc/rock.png', '🪨'));
+  const state = { n: 0, taps: 0, busy: true, manual: false, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  function ask() { say([`${KAI[state.n]} タッチ！`, ...(state.manual ? ['それから ジャンプの ボタンを おしてね'] : [])]); }
+  function newRound() {
+    state.busy = false; state.taps = 0; count.textContent = '0';
+    state.manual = Baby.level() >= 2;                      // レベル2から 自分で「ジャンプ」を押す（数えて止まる）
+    const max = [0, 3, 5, 7, 10, 10][Baby.level()];
+    state.n = Baby.fresh('jump', () => 1 + Math.floor(Math.random() * max), String);
+    num.textContent = state.n;
+    hero.className = ''; hero.style.transform = '';
+    go.classList.toggle('hidden', !state.manual);
+    Baby.prime(['ジャンプ！', 'とべた！ やったね', 'おおすぎたよ。 もういちど', 'たりないよ。 もういちど']);
+    ask();
+  }
+  function fly() {
+    state.busy = true;
+    hero.classList.remove('hop'); void hero.offsetWidth; hero.classList.add('fly');
+    tone({ type: 'sine', f0: 400, f1: 900, dur: 0.5, gain: 0.2 });
+    say('ジャンプ！');
+    setTimeout(() => { SFX.correct(); cheer('🎉'); celebrate(); sayThen('とべた！ やったね', { delay: 100 }, () => win(newRound), 600); }, 1300);
+  }
+  field.addEventListener('pointerdown', (e) => {
+    if (state.busy) return; e.preventDefault();
+    if (!state.manual && state.taps >= state.n) return;
+    state.taps++; count.textContent = state.taps;
+    hero.classList.remove('hop'); void hero.offsetWidth; hero.classList.add('hop'); setTimeout(() => hero.classList.remove('hop'), 150);
+    SFX.count(state.taps); burst(e.clientX, e.clientY, 3);
+    if (state.taps <= 10) say(READ[state.taps], { delay: 30 });
+    if (!state.manual && state.taps === state.n) setTimeout(fly, 500);
+  });
+  go.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); if (state.busy || !state.manual) return;
+    if (state.taps === state.n) fly();
+    else {
+      state.busy = true; SFX.wrong(); animate(hero, 'shake', 400);
+      sayThen(state.taps > state.n ? 'おおすぎたよ。 もういちど' : 'たりないよ。 もういちど', { delay: 200 }, () => { state.taps = 0; count.textContent = '0'; state.busy = false; ask(); }, 300);
+    }
+  });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

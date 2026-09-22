@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ぶんるい</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f3e5f5">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #f3e5f5 0%, #ffffff 100%); }
+
+  #swatch { align-self: center; padding: 6px 18px; border-radius: 20px; font-size: min(7vw, 30px); font-weight: bold; color: #345; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); display: flex; align-items: center; gap: 10px; }
+  #swatch i { display: inline-block; width: 28px; height: 28px; border-radius: 50%; border: 3px solid #333; background: var(--c); }
+  .choice .face { width: var(--sz); height: var(--sz); }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🗂️</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">いろと おおきさを よくみて</div>
+  <div class="stars" id="stars"></div>
+  <div id="swatch"><i></i><span id="swText"></span></div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const swatch = document.getElementById('swatch'), swText = document.getElementById('swText');
+  const POOL = allItems().filter(p => p.item.color);
+  const state = { color: '', big: true, opts: [], busy: false, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  const sizeWord = () => state.big ? 'おおきいのは どれ？' : 'ちいさいのは どれ？';
+  function ask() { say([`${COLORS[state.color].name}の`, sizeWord()]); }
+  function newRound() {
+    state.busy = false;
+    const colors = shuffle([...new Set(POOL.map(p => p.item.color))]);
+    const nCol = Baby.level() >= 3 ? 3 : 2;
+    state.color = Baby.fresh('classify', () => colors[0], String);
+    state.big = Math.random() < 0.5;
+    const use = [state.color, ...colors.filter(c => c !== state.color).slice(0, nCol - 1)];
+    state.opts = [];
+    for (const c of use) for (const big of [true, false]) state.opts.push({ p: pick(POOL.filter(p => p.item.color === c)), c, big });
+    state.opts = shuffle(state.opts);
+    choices.className = 'choices ' + (state.opts.length === 4 ? 'four' : 'six');
+    choices.innerHTML = '';
+    state.opts.forEach((o, i) => {
+      const d = document.createElement('div'); d.className = 'choice'; d.dataset.i = i;
+      d.style.setProperty('--sz', o.big ? '84%' : '38%');
+      d.appendChild(makeFace(o.p.set, o.p.item)); choices.appendChild(d);
+    });
+    swatch.style.setProperty('--c', COLORS[state.color].css);
+    swText.textContent = `${COLORS[state.color].name}の ${state.big ? 'おおきい' : 'ちいさい'}の`;
+    Baby.prime(['いろと おおきさを よくみてね', 'ちがうよ。']);
+    ask();
+  }
+  choices.addEventListener('pointerdown', (e) => {
+    const d = e.target.closest('.choice'); if (!d || state.busy) return; e.preventDefault();
+    const o = state.opts[Number(d.dataset.i)];
+    burst(e.clientX, e.clientY, 5);
+    if (o.c === state.color && o.big === state.big) {
+      state.busy = true; animate(d, 'glow', 900); SFX.correct();
+      sayThen([Baby.praise(), `${COLORS[state.color].name}の`, state.big ? 'おおきい！' : 'ちいさい！'], { delay: 300 }, () => win(newRound), 600);
+    } else {
+      animate(d, 'shake', 400); SFX.wrong();
+      say(['ちがうよ。', 'いろと おおきさを よくみてね'], { delay: 200 });
+    }
+  });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

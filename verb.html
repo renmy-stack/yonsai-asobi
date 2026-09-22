@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>どうさのことば</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e0f2f1">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e0f2f1 0%, #ffffff 100%); }
+
+  #word { align-self: center; padding: 6px 24px; border-radius: 20px; font-size: min(10vw, 44px); font-weight: bold; color: #345; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); }
+  .choices.four { grid-template-columns: repeat(2, 1fr); }
+  .choice .face.emoji { font-size: min(16vmin, 80px); }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🏃</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">どうさの ことば</div>
+  <div class="stars" id="stars"></div>
+  <div id="word"></div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const VERBS = [
+    ['hashiru', 'はしる', '🏃'], ['taberu', 'たべる', '🍽️'], ['neru', 'ねる', '😴'], ['nomu', 'のむ', '🥤'],
+    ['aruku', 'あるく', '🚶'], ['tobu', 'とぶ', '🦘'], ['naku', 'なく', '😢'], ['warau', 'わらう', '😄'],
+    ['yomu', 'よむ', '📖'], ['kaku', 'かく', '✏️'], ['utau', 'うたう', '🎤'], ['odoru', 'おどる', '💃'],
+    ['mitsukeru', 'みつける', '🔍'], ['morau', 'もらう', '🎁'], ['nageru', 'なげる', '⚾'], ['arau', 'あらう', '🧼'],
+  ];
+  const verbPic = (v) => Baby.pic(`assets/verbs/${v[0]}.png`, v[2], 'face');
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const word = document.getElementById('word'), choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const state = { target: null, opts: [], busy: false, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  function ask() { say(`${state.target[1]}は どれかな？`); }
+  function newRound() {
+    state.busy = false;
+    const n = Baby.level() >= 3 ? 4 : 3;
+    const sh = Baby.fresh('verb', () => shuffle(VERBS), a => a[0][0]);
+    state.target = sh[0]; state.opts = shuffle(sh.slice(0, n));
+    word.textContent = state.target[1];
+    choices.className = 'choices ' + (n === 4 ? 'four' : '');
+    choices.innerHTML = '';
+    state.opts.forEach((v, i) => { const d = document.createElement('div'); d.className = 'choice'; d.dataset.i = i; d.appendChild(verbPic(v)); choices.appendChild(d); });
+    Baby.prime([`${state.target[1]}！`, ...state.opts.map(v => `それは ${v[1]}。`)]);
+    ask();
+  }
+  choices.addEventListener('pointerdown', (e) => {
+    const d = e.target.closest('.choice'); if (!d || state.busy) return; e.preventDefault();
+    const v = state.opts[Number(d.dataset.i)];
+    animate(d.querySelector('.face'), 'bounce', 600); burst(e.clientX, e.clientY, 5);
+    if (v === state.target) {
+      state.busy = true; animate(d, 'glow', 900); SFX.correct();
+      sayThen([Baby.praise(), `${v[1]}！`], { delay: 300 }, () => win(newRound), 600);
+    } else {
+      animate(d, 'shake', 400); SFX.wrong();
+      say([`それは ${v[1]}。`, `${state.target[1]}は どれかな？`], { delay: 200 });
+    }
+  });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

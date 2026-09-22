@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>はんぶんこ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fce4ec">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #fce4ec 0%, #ffffff 100%); }
+
+  #pile { flex: 0.8; min-height: 0; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; padding: 8px; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  .ck { width: min(13vw, 64px); height: min(13vw, 64px); display: flex; align-items: center; justify-content: center; }
+  .ck img { width: 100%; height: 100%; object-fit: contain; } .ck.emoji { font-size: min(9vw, 40px); }
+  #plates { flex: 1.2; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .plate { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); padding: 8px; touch-action: none; }
+  .plate .who { width: 30%; aspect-ratio: 1; } .plate .who img { width: 100%; height: 100%; object-fit: contain; } .plate .who.emoji { display: flex; align-items: center; justify-content: center; font-size: 40px; }
+  .plate .dish { width: 90%; min-height: 40%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; border-radius: 50% / 30%; background: #f5f5f5; border: 4px solid #e0e0e0; padding: 6px; }
+  .plate .dish .ck { width: min(10vw, 48px); height: min(10vw, 48px); }
+  .plate .n { font-size: 26px; font-weight: bold; color: #345; }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🍪</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">おなじ かずに わけよう</div>
+  <div class="stars" id="stars"></div>
+  <div id="pile"></div>
+  <div id="plates">
+    <div class="plate" data-i="0"><div class="who" id="whoA"></div><div class="dish"></div><div class="n">0</div></div>
+    <div class="plate" data-i="1"><div class="who" id="whoB"></div><div class="dish"></div><div class="n">0</div></div>
+  </div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, sayThen, burst, animate, cheer, celebrate, setupStart, setupHome, shuffle, pick } = Baby;
+  const KO = ['', 'いっこ', 'にこ', 'さんこ', 'よんこ', 'ごこ', 'ろっこ', 'ななこ', 'はっこ'];
+  const pile = document.getElementById('pile'), plates = document.getElementById('plates');
+  const stars = document.getElementById('stars');
+  document.getElementById('whoA').appendChild(Baby.pic('assets/misc/child.png', '👦', 'who'));
+  document.getElementById('whoB').appendChild(Baby.pic('assets/icons/zundamon.png', '🟢', 'who'));
+  const state = { n: 0, left: 0, cnt: [0, 0], busy: false, score: Baby.getLevel() };
+  const SWEETS = [['assets/words/kukkii.png', '🍪'], ['assets/foods/strawberry.png', '🍓'], ['assets/words/doonatsu.png', '🍩'], ['assets/foods/onigiri.png', '🍙']];
+  let sweet = SWEETS[0];
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  function ask() { say('おなじ かずに わけよう'); }
+  function newRound() {
+    state.busy = false; state.cnt = [0, 0];
+    const max = [0, 2, 3, 4, 4, 4][Baby.level()];             // 2,4,6,8 こ
+    state.n = 2 * Baby.fresh('share', () => 1 + Math.floor(Math.random() * max), String);
+    state.left = state.n;
+    sweet = pick(SWEETS);
+    pile.innerHTML = '';
+    for (let i = 0; i < state.n; i++) pile.appendChild(Baby.pic(sweet[0], sweet[1], 'ck'));
+    plates.querySelectorAll('.dish').forEach(d => d.innerHTML = '');
+    plates.querySelectorAll('.n').forEach(d => d.textContent = '0');
+    Baby.prime(['おなじ かず！ はんぶんこ できた！', 'かずが ちがうよ。 もういちど']);
+    ask();
+  }
+  plates.addEventListener('pointerdown', (e) => {
+    const p = e.target.closest('.plate'); if (!p || state.busy || !state.left) return; e.preventDefault();
+    const i = Number(p.dataset.i);
+    const ck = pile.querySelector('.ck'); ck.remove();
+    const dish = p.querySelector('.dish'); const c = Baby.pic(sweet[0], sweet[1], 'ck'); dish.appendChild(c); animate(c, 'bounce', 400);
+    state.cnt[i]++; state.left--;
+    p.querySelector('.n').textContent = state.cnt[i];
+    SFX.count(state.cnt[i]); burst(e.clientX, e.clientY, 3);
+    if (state.left === 0) {
+      state.busy = true;
+      if (state.cnt[0] === state.cnt[1]) {
+        SFX.correct(); cheer('🎉'); celebrate();
+        sayThen(['おなじ かず！ はんぶんこ できた！', `${KO[state.cnt[0]]}と`, `${KO[state.cnt[1]]}！`], { delay: 300 }, () => win(newRound), 600);
+      } else {
+        SFX.wrong(); animate(plates, 'shake', 400);
+        sayThen(['かずが ちがうよ。 もういちど', `${KO[state.cnt[0]]}と`, `${KO[state.cnt[1]]}。`], { delay: 300 }, () => {
+          // 戻す
+          state.busy = false; state.cnt = [0, 0]; state.left = state.n;
+          pile.innerHTML = ''; for (let k = 0; k < state.n; k++) pile.appendChild(Baby.pic(sweet[0], sweet[1], 'ck'));
+          plates.querySelectorAll('.dish').forEach(d => d.innerHTML = ''); plates.querySelectorAll('.n').forEach(d => d.textContent = '0');
+        }, 400);
+      }
+    }
+  });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

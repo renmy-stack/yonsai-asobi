@@ -62,9 +62,11 @@
   .tab[data-cat="kotoba"]  { --edge: #ba68c8; }
   .tab[data-cat="ugoki"]   { --edge: #4fc3f7; }
   .tab[data-cat="tsukuru"] { --edge: #f48fb1; }
+  .tab[data-cat="seikatsu"] { --edge: #81c784; }
 
   .menu { flex: 1; min-height: 0; display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; }
   .menu.many { grid-template-columns: repeat(4, 1fr); }
+  .menu.few { grid-template-rows: repeat(3, 1fr); }   /* 3つ以下のときは縦長にしない */
   @media (orientation: landscape) { .menu, .menu.many { grid-template-columns: repeat(6, 1fr); } }
   .tile {
     position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
@@ -87,6 +89,7 @@
   .kotoba  { --edge: #ba68c8; }
   .ugoki   { --edge: #4fc3f7; }
   .tsukuru { --edge: #f48fb1; }
+  .seikatsu { --edge: #81c784; }
   .note { font-size: 11px; color: #4a6b8a; text-align: center; margin: 0; }
   /* おうちのひと用の計算ゲート */
   #gate { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; background: rgba(40,50,70,.85); }
@@ -139,6 +142,7 @@
     [...tabs.children].forEach(t => t.classList.toggle('on', t.dataset.cat === cat));
     const list = GAMES.filter(g => g.cat === cat && !disabled.has(g.id));
     menu.classList.toggle('many', list.length > 9);
+    menu.classList.toggle('few', list.length <= 3);
     menu.innerHTML = '';
     list.forEach((g, i) => { try {
       const a = document.createElement('a');

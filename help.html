@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>おてつだい</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f1f8e9">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #f1f8e9 0%, #ffffff 100%); }
+
+  #floor { flex: 1; min-height: 0; position: relative; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  .item { position: absolute; width: 28%; aspect-ratio: 1; transform: translate(-50%, -50%); touch-action: none; z-index: 2; display: flex; align-items: center; justify-content: center; }
+  .item img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; } .item.emoji { font-size: 60px; }
+  .item.drag { z-index: 5; filter: drop-shadow(0 8px 6px rgba(0,0,0,.25)); }
+  #boxes { height: min(24vh, 150px); display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .box { border-radius: 24px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-weight: bold; color: #345; font-size: 15px; transition: transform .15s; }
+  .box .bpic { width: 60%; height: 65%; display: flex; align-items: center; justify-content: center; } .box .bpic img { width: 100%; height: 100%; object-fit: contain; } .box .bpic.emoji { font-size: 44px; }
+  .box.over { transform: scale(1.06); box-shadow: 0 0 0 5px #ffd84d; }
+  .box.got { animation: got .5s; } @keyframes got { 30% { transform: scale(1.12); } }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🧹</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">どこに もっていく？</div>
+  <div class="stars" id="stars"></div>
+  <div id="floor"></div>
+  <div id="boxes">
+    <div class="box" data-t="sink">ながし</div>
+    <div class="box" data-t="trash">ゴミばこ</div>
+    <div class="box" data-t="toy">おもちゃばこ</div>
+  </div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, burst, celebrate, cheer, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const ITEMS = [
+    ['assets/life/plate.png', 'おさら', '🍽️', 'sink'], ['assets/life/cup.png', 'コップ', '🥛', 'sink'], ['assets/life/bowl.png', 'おわん', '🍚', 'sink'], ['assets/words/supuun.png', 'スプーン', '🥄', 'sink'],
+    ['assets/life/peel.png', 'バナナの かわ', '🍌', 'trash'], ['assets/life/wrapper.png', 'おかしの ふくろ', '🍬', 'trash'], ['assets/life/paper.png', 'かみくず', '🗑️', 'trash'],
+    ['assets/words/booru.png', 'ボール', '⚽', 'toy'], ['assets/life/blocks.png', 'つみき', '🧱', 'toy'], ['assets/words/kuma.png', 'くまさん', '🧸', 'toy'],
+  ];
+  const BOX = { sink: ['assets/life/sink.png', '🚰', 'ながしに かたづけた！'], trash: ['assets/life/trash.png', '🗑️', 'ゴミばこに かたづけた！'], toy: ['assets/life/toybox.png', '📦', 'おもちゃばこに かたづけた！'] };
+  const floor = document.getElementById('floor'), boxes = document.getElementById('boxes');
+  const stars = document.getElementById('stars');
+  [...boxes.children].forEach(b => b.prepend(Baby.pic(BOX[b.dataset.t][0], BOX[b.dataset.t][1], 'bpic')));
+  const state = { queue: [], cur: null, drag: null, busy: false, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  function newRound() {
+    state.queue = shuffle(ITEMS).slice(0, [0, 4, 5, 6, 7, 8][Baby.level()]);
+    say('どこに もっていく？ うごかしてね');
+    nextItem();
+  }
+  function nextItem() {
+    floor.innerHTML = '';
+    if (!state.queue.length) {
+      SFX.fanfare(); cheer('🎉'); celebrate();
+      Baby.say('ぜんぶ おてつだい できた！ ありがとう！', { delay: 400 }).then(() => win(newRound));
+      return;
+    }
+    state.cur = state.queue.shift();
+    const el = Baby.pic(state.cur[0], state.cur[2], 'item');
+    el.style.left = '50%'; el.style.top = '50%';
+    floor.appendChild(el);
+    say(state.cur[1], { delay: 300 });
+  }
+  const boxAt = (x, y) => [...boxes.children].find(b => { const r = b.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; });
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('.item'); if (!el || state.busy) return;
+    e.preventDefault();
+    const r = el.getBoundingClientRect();
+    state.drag = { el, ox: e.clientX - (r.left + r.width / 2), oy: e.clientY - (r.top + r.height / 2) };
+    el.classList.add('drag');
+    el.style.position = 'fixed'; el.style.width = `${r.width}px`; el.style.height = `${r.height}px`;
+    el.style.left = `${r.left + r.width / 2}px`; el.style.top = `${r.top + r.height / 2}px`;
+    document.body.appendChild(el);
+    SFX.pop();
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!state.drag) return; e.preventDefault();
+    state.drag.el.style.left = `${e.clientX - state.drag.ox}px`; state.drag.el.style.top = `${e.clientY - state.drag.oy}px`;
+    const b = boxAt(e.clientX, e.clientY);
+    [...boxes.children].forEach(x => x.classList.toggle('over', x === b));
+  });
+  const drop = (e) => {
+    if (!state.drag) return;
+    const { el } = state.drag; state.drag = null;
+    [...boxes.children].forEach(x => x.classList.remove('over'));
+    const b = boxAt(e.clientX, e.clientY);
+    if (b && b.dataset.t === state.cur[3]) {
+      el.remove(); animate(b, 'got', 500); SFX.correct(); burst(e.clientX, e.clientY, 8);
+      Baby.say([Baby.praise(), BOX[b.dataset.t][2]], { delay: 200 }).then(() => setTimeout(nextItem, 300));
+    } else {
+      if (b) { SFX.wrong(); say('そこじゃないよ', { delay: 100 }); }
+      el.classList.remove('drag');
+      el.style.position = ''; el.style.width = ''; el.style.height = ''; el.style.left = '50%'; el.style.top = '50%';
+      floor.appendChild(el);
+    }
+  };
+  document.addEventListener('pointerup', drop);
+  document.addEventListener('pointercancel', drop);
+  setupStart(() => setTimeout(newRound, 300));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

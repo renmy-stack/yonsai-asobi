@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>かるた</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fff3e0">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #fff3e0 0%, #ffffff 100%); }
+
+  .choices.eight { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); }
+  .choice .wpic { width: 78%; height: 78%; display: block; }
+  .choice .wpic img { width: 100%; height: 100%; object-fit: contain; }
+  .choice .wpic.emoji { display: flex; align-items: center; justify-content: center; font-size: min(14vmin, 70px); }
+  #ear { text-align: center; font-size: 44px; min-height: 56px; }
+  #ear.on { animation: pulse .5s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🎴</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">よく きいて えを タッチ</div>
+  <div class="stars" id="stars"></div>
+  <div id="ear">👂</div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script src="words.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const ear = document.getElementById('ear');
+  const state = { target: null, opts: [], busy: false, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  function ask() { ear.classList.add('on'); say(state.target[1]).then(() => ear.classList.remove('on')); }
+  function newRound() {
+    state.busy = false;
+    const n = [0, 4, 6, 6, 8, 8][Baby.level()];
+    const sh = Baby.fresh('karuta', () => shuffle(WORDS), a => a[0][1]);
+    state.target = sh[0];
+    state.opts = shuffle(sh.slice(0, n));
+    choices.className = 'choices ' + ({ 4: 'four', 6: 'six', 8: 'eight' }[n]);
+    choices.innerHTML = '';
+    state.opts.forEach((w, i) => {
+      const c = document.createElement('div'); c.className = 'choice'; c.dataset.i = i;
+      c.appendChild(wordPic(w)); choices.appendChild(c);
+    });
+    Baby.prime([state.target[1], 'ちがうよ。']);
+    setTimeout(ask, 300);
+  }
+  choices.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.choice');
+    if (!c || state.busy) return;
+    e.preventDefault();
+    const w = state.opts[Number(c.dataset.i)];
+    burst(e.clientX, e.clientY, 5);
+    if (w === state.target) {
+      state.busy = true;
+      animate(c, 'glow', 900);
+      SFX.correct();
+      sayThen([Baby.praise(), w[1]], { delay: 300 }, () => win(newRound), 600);
+    } else {
+      animate(c, 'shake', 400);
+      SFX.wrong();
+      say(['ちがうよ。', state.target[1]], { delay: 200 });
+    }
+  });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

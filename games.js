@@ -6,6 +6,7 @@ window.CATEGORIES = [
   { id: 'kotoba',  icon: 'あ', name: 'ことば' },
   { id: 'ugoki',   icon: '🏃', name: 'うごき' },
   { id: 'tsukuru', icon: '🎨', name: 'つくる' },
+  { id: 'seikatsu', icon: '🪥', name: 'せいかつ' },
 ];
 window.GAMES = [
   // かず
@@ -15,6 +16,9 @@ window.GAMES = [
   { id: 'compare',  icon: '⚖️', name: 'くらべよう',     cat: 'kazu' },
   { id: 'sort',     icon: '📶', name: 'ならべかえ',     cat: 'kazu' },
   { id: 'clock',    icon: '🕒', name: 'とけい',         cat: 'kazu' },
+  { id: 'shop',     icon: '🛒', name: 'おかいもの',     cat: 'kazu' },
+  { id: 'nth',      icon: '🔢', name: 'なんばんめ？',   cat: 'kazu' },
+  { id: 'share',    icon: '🍪', name: 'はんぶんこ',     cat: 'kazu' },
   // あたま
   { id: 'quiz',     icon: '🔍', name: 'どこかな？',     cat: 'atama' },
   { id: 'color',    icon: '🎨', name: 'いろあて',       cat: 'atama' },
@@ -28,12 +32,19 @@ window.GAMES = [
   { id: 'diff',     icon: '👓', name: 'まちがいさがし', cat: 'atama' },
   { id: 'memory',   icon: '🃏', name: 'おなじカード',   cat: 'atama' },
   { id: 'sequence', icon: '👀', name: 'じゅんばん',     cat: 'atama' },
+  { id: 'story',    icon: '📖', name: 'おはなし',       cat: 'atama' },
+  { id: 'classify', icon: '🗂️', name: 'ぶんるい',       cat: 'atama' },
+  { id: 'rotate',   icon: '🔄', name: 'かげのむき',     cat: 'atama' },
   // ことば
   { id: 'hiragana', icon: 'あ', name: 'ひらがな',       cat: 'kotoba' },
   { id: 'trace',    icon: '✍️', name: 'なぞりがき',     cat: 'kotoba' },
   { id: 'shiritori',icon: '🔗', name: 'しりとり',       cat: 'kotoba' },
   { id: 'opposite', icon: '↔️', name: 'はんたいことば', cat: 'kotoba' },
   { id: 'spell',    icon: '🧩', name: 'ことばづくり',   cat: 'kotoba' },
+  { id: 'karuta',   icon: '🎴', name: 'かるた',         cat: 'kotoba' },
+  { id: 'verb',     icon: '🏃', name: 'どうさのことば', cat: 'kotoba' },
+  { id: 'cry',      icon: '🐔', name: 'なきごえあて',   cat: 'kotoba' },
+  { id: 'sentence', icon: '📝', name: 'ものがたり',     cat: 'kotoba' },
   // うごき
   { id: 'mole',     icon: '🐹', name: 'もぐらたたき',   cat: 'ugoki' },
   { id: 'balloon',  icon: '🎈', name: 'ふうせんわり',   cat: 'ugoki' },
@@ -42,6 +53,8 @@ window.GAMES = [
   { id: 'maze',     icon: '🌀', name: 'めいろ',         cat: 'ugoki' },
   { id: 'sugoroku', icon: '🎲', name: 'すごろく',       cat: 'ugoki' },
   { id: 'janken',   icon: '✊', name: 'じゃんけん',     cat: 'ugoki' },
+  { id: 'rhythm',   icon: '🥁', name: 'リズムたたき',   cat: 'ugoki' },
+  { id: 'jump',     icon: '🦘', name: 'かぞえてジャンプ', cat: 'ugoki' },
   // つくる
   { id: 'coloring', icon: '🖍️', name: 'ぬりえ',         cat: 'tsukuru' },
   { id: 'draw',     icon: '✏️', name: 'おえかき',       cat: 'tsukuru' },
@@ -50,4 +63,11 @@ window.GAMES = [
   { id: 'tangram',  icon: '🔺', name: 'かたちはめ',     cat: 'tsukuru' },
   { id: 'tidy',     icon: '📦', name: 'かたづけ',       cat: 'tsukuru' },
   { id: 'road',     icon: '🛣️', name: 'みちつなぎ',     cat: 'tsukuru' },
+  { id: 'bento',    icon: '🍱', name: 'おべんとう',     cat: 'tsukuru' },
+  { id: 'house',    icon: '🏠', name: 'おうちづくり',   cat: 'tsukuru' },
+  { id: 'robot',    icon: '🤖', name: 'ロボット',       cat: 'tsukuru' },
+  // せいかつ
+  { id: 'teeth',    icon: '🪥', name: 'はみがき',       cat: 'seikatsu' },
+  { id: 'dress',    icon: '👕', name: 'おきがえ',       cat: 'seikatsu' },
+  { id: 'help',     icon: '🧹', name: 'おてつだい',     cat: 'seikatsu' },
 ];

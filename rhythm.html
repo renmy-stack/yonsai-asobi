@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>リズムたたき</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ffebee">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #ffebee 0%, #ffffff 100%); }
+
+  #drum { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; touch-action: none; }
+  #drum .pic { width: min(60vw, 60vh, 360px); height: min(60vw, 60vh, 360px); display: flex; align-items: center; justify-content: center; transition: transform .08s; }
+  #drum .pic img { width: 100%; height: 100%; object-fit: contain; } #drum .pic.emoji { font-size: 140px; }
+  #drum.hit .pic { transform: scale(0.92); }
+  #drum.lit .pic { filter: drop-shadow(0 0 24px #ffd54f) brightness(1.15); }
+  #beats { text-align: center; font-size: 30px; min-height: 40px; letter-spacing: 4px; }
+  #phase { text-align: center; font-size: 22px; font-weight: bold; color: #c62828; min-height: 30px; }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🥁</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">よく きいて おなじ かず たたこう</div>
+  <div class="stars" id="stars"></div>
+  <div id="phase"></div>
+  <div id="beats"></div>
+  <div id="drum"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, sayThen, burst, animate, cheer, celebrate, setupStart, setupHome, tone, noise } = Baby;
+  const drum = document.getElementById('drum'), beats = document.getElementById('beats'), phase = document.getElementById('phase');
+  const stars = document.getElementById('stars');
+  drum.appendChild(Baby.pic('assets/words/taiko.png', '🥁'));
+  const state = { n: 0, taps: 0, listening: false, timer: null, busy: true, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  const don = () => { tone({ type: 'sine', f0: 150, f1: 60, dur: 0.25, gain: 0.5 }); noise({ dur: 0.06, gain: 0.15, lowpass: 800 }); };
+  function play() {
+    state.busy = true; state.listening = false; state.taps = 0; beats.textContent = '';
+    phase.textContent = 'よく きいてね';
+    say('よく きいてね').then(() => {
+      for (let i = 0; i < state.n; i++) setTimeout(() => { don(); drum.classList.add('lit'); setTimeout(() => drum.classList.remove('lit'), 200); beats.textContent += '🔴'; }, 400 + i * 550);
+      setTimeout(() => {
+        beats.textContent = '';
+        phase.textContent = 'きみの ばん！';
+        say('きみの ばん！ おなじ かず たたいて！').then(() => { state.listening = true; state.busy = false; });
+      }, 400 + state.n * 550 + 300);
+    });
+  }
+  function newRound() {
+    state.n = Baby.fresh('rhythm', () => 1 + Math.floor(Math.random() * [0, 3, 4, 5, 6, 7][Baby.level()]), String);
+    Baby.prime(['おなじ かず！ じょうず！', 'かずが ちがったよ。 もういちど']);
+    play();
+  }
+  function judge() {
+    state.listening = false; state.busy = true;
+    if (state.taps === state.n) {
+      SFX.correct(); cheer('🎉'); celebrate();
+      sayThen(['おなじ かず！ じょうず！'], { delay: 300 }, () => win(newRound), 600);
+    } else {
+      SFX.wrong();
+      sayThen('かずが ちがったよ。 もういちど', { delay: 300 }, play, 400);
+    }
+  }
+  drum.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    drum.classList.add('hit'); setTimeout(() => drum.classList.remove('hit'), 90);
+    don(); burst(e.clientX, e.clientY, 4, ['🎵', '✨']);
+    if (!state.listening) return;
+    state.taps++; beats.textContent += '🔵';
+    clearTimeout(state.timer);
+    if (state.taps > state.n) { judge(); return; }
+    state.timer = setTimeout(judge, 1500);        // 1.5秒たたかなければ おしまい
+  });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

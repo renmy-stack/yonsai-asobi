@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ものがたりをつくる</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fce4ec">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #fce4ec 0%, #ffffff 100%); }
+
+  #text { align-self: center; min-height: 48px; padding: 6px 20px; border-radius: 20px; font-size: min(7vw, 30px); font-weight: bold; color: #345; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); }
+  #cols { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .col { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+  .col h3 { margin: 0; text-align: center; font-size: 16px; color: #789; }
+  .col .opt { flex: 1; min-height: 0; border-radius: 18px; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .col .opt.on { background: #fff6b3; box-shadow: 0 0 0 4px #ffd84d; }
+  .opt .face, .opt .vpic { width: 70%; height: 80%; } .opt .face img, .opt .vpic img { width: 100%; height: 100%; object-fit: contain; }
+  .opt .vpic.emoji { display: flex; align-items: center; justify-content: center; font-size: min(10vmin, 44px); }
+  #again { align-self: center; height: 48px; padding: 0 24px; border: none; border-radius: 24px; background: #ffd84d; font-size: 20px; font-weight: bold; color: #345; font-family: inherit; box-shadow: 0 5px 0 rgba(0,0,0,.12); visibility: hidden; }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">📝</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">だれが なにを どうした？</div>
+  <div class="stars" id="stars"></div>
+  <div id="text">？が ？を ？</div>
+  <div id="cols">
+    <div class="col" data-k="who"><h3>だれが</h3></div>
+    <div class="col" data-k="what"><h3>なにを</h3></div>
+    <div class="col" data-k="did"><h3>どうした</h3></div>
+  </div>
+  <button id="again" type="button">もういっかい</button>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, burst, animate, cheer, celebrate, setupStart, setupHome, shuffle, pick } = Baby;
+  const DID = [['taberu', 'たべた', '🍽️'], ['mitsukeru', 'みつけた', '🔍'], ['morau', 'もらった', '🎁'], ['nageru', 'なげた', '⚾'], ['arau', 'あらった', '🧼'], ['kaku', 'かいた', '✏️']];
+  const cols = document.getElementById('cols'), text = document.getElementById('text'), again = document.getElementById('again');
+  const stars = document.getElementById('stars');
+  const state = { sel: {}, opts: {}, busy: false, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  function build() {
+    state.sel = {}; state.busy = false; again.style.visibility = 'hidden';
+    state.opts = {
+      who: shuffle(CATALOG.animals.items).slice(0, 3).map(item => ({ set: CATALOG.animals, item, label: item.name, say: `${item.name}が` })),
+      what: shuffle(CATALOG.foods.items).slice(0, 3).map(item => ({ set: CATALOG.foods, item, label: item.name, say: `${item.name}を` })),
+      did: shuffle(DID).slice(0, 3).map(v => ({ verb: v, label: v[1], say: `${v[1]}！` })),
+    };
+    for (const col of cols.children) {
+      const k = col.dataset.k;
+      col.querySelectorAll('.opt').forEach(x => x.remove());
+      state.opts[k].forEach((o, i) => {
+        const d = document.createElement('div'); d.className = 'opt'; d.dataset.i = i;
+        if (o.item) d.appendChild(makeFace(o.set, o.item)); else d.appendChild(Baby.pic(`assets/verbs/${o.verb[0]}.png`, o.verb[2], 'vpic'));
+        col.appendChild(d);
+      });
+    }
+    render();
+    say('だれが なにを どうした？ えらんでね');
+  }
+  function render() {
+    const w = state.sel.who ? state.sel.who.label : '？', a = state.sel.what ? state.sel.what.label : '？', d = state.sel.did ? state.sel.did.label : '？';
+    text.textContent = `${w}が ${a}を ${d}`;
+  }
+  cols.addEventListener('pointerdown', (e) => {
+    const d = e.target.closest('.opt'); if (!d || state.busy) return; e.preventDefault();
+    const col = d.parentNode, k = col.dataset.k;
+    const o = state.opts[k][Number(d.dataset.i)];
+    state.sel[k] = o;
+    col.querySelectorAll('.opt').forEach(x => x.classList.toggle('on', x === d));
+    SFX.pop(); burst(e.clientX, e.clientY, 4);
+    say(o.say);
+    render();
+    if (state.sel.who && state.sel.what && state.sel.did) {
+      state.busy = true;
+      setTimeout(() => {
+        SFX.correct(); cheer('📖'); celebrate();
+        Baby.say([state.sel.who.say, state.sel.what.say, state.sel.did.say], { delay: 200 }).then(() => win(() => { again.style.visibility = 'visible'; state.busy = false; }));
+      }, 700);
+    }
+  });
+  again.addEventListener('pointerdown', (e) => { e.preventDefault(); SFX.flip(); build(); });
+  setupStart(() => setTimeout(build, 400));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>

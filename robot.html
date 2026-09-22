@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ロボットくみたて</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#eceff1">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #eceff1 0%, #ffffff 100%); }
+
+  #stand { flex: 1.2; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  #bot { position: relative; height: 92%; aspect-ratio: 3 / 4; }
+  .rp { position: absolute; display: flex; align-items: center; justify-content: center; }
+  .rp img { width: 100%; height: 100%; object-fit: contain; } .rp.emoji { font-size: min(9vmin, 44px); }
+  #head { left: 25%; top: 0; width: 50%; height: 30%; } #body { left: 20%; top: 28%; width: 60%; height: 40%; }
+  #armL { left: -6%; top: 30%; width: 28%; height: 36%; } #armR { right: -6%; top: 30%; width: 28%; height: 36%; transform: scaleX(-1); }
+  #legs { left: 20%; top: 66%; width: 60%; height: 34%; }
+  #bot.dance { animation: dance .5s ease-in-out 6; } @keyframes dance { 0%, 100% { transform: rotate(0) translateY(0); } 25% { transform: rotate(-6deg) translateY(-6%); } 75% { transform: rotate(6deg) translateY(-6%); } }
+  #palette { height: min(30vh, 200px); display: grid; grid-template-rows: repeat(4, 1fr); gap: 6px; }
+  .prow { display: grid; grid-template-columns: 64px repeat(3, 1fr); gap: 6px; min-height: 0; }
+  .prow .lab { display: flex; align-items: center; justify-content: center; font-weight: bold; color: #789; font-size: 15px; }
+  .pal { border-radius: 14px; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; min-height: 0; }
+  .pal.on { background: #fff6b3; box-shadow: 0 0 0 3px #ffd84d; }
+  .pal .pic { width: 80%; height: 84%; display: flex; align-items: center; justify-content: center; } .pal .pic img { width: 100%; height: 100%; object-fit: contain; } .pal .pic.emoji { font-size: 26px; }
+  #go { align-self: center; height: 46px; padding: 0 26px; border: none; border-radius: 24px; background: #ffd84d; font-size: 20px; font-weight: bold; color: #345; font-family: inherit; box-shadow: 0 5px 0 rgba(0,0,0,.12); }
+
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🤖</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">パーツを えらんで ロボットを つくろう</div>
+  <div class="stars" id="stars"></div>
+  <div id="stand"><div id="bot"><div class="rp" id="head"></div><div class="rp" id="armL"></div><div class="rp" id="armR"></div><div class="rp" id="body"></div><div class="rp" id="legs"></div></div></div>
+  <div id="palette"></div>
+  <button id="go" type="button">うごかす！</button>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, burst, animate, cheer, celebrate, setupStart, setupHome, tone } = Baby;
+  const KINDS = [['head', 'あたま', '🤖'], ['body', 'からだ', '📦'], ['arm', 'うで', '🦾'], ['legs', 'あし', '🦿']];
+  const palette = document.getElementById('palette'), bot = document.getElementById('bot');
+  const stars = document.getElementById('stars');
+  const state = { busy: false, chosen: {}, score: Baby.getLevel() };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  for (const [k, label, emoji] of KINDS) {
+    const row = document.createElement('div'); row.className = 'prow';
+    const lab = document.createElement('div'); lab.className = 'lab'; lab.textContent = label; row.appendChild(lab);
+    for (let i = 1; i <= 3; i++) { const d = document.createElement('div'); d.className = 'pal'; d.dataset.k = k; d.dataset.i = i; d.appendChild(Baby.pic(`assets/robot/${k}${i}.png`, emoji)); row.appendChild(d); }
+    palette.appendChild(row);
+  }
+  function put(k, i, emoji) {
+    const ids = k === 'arm' ? ['armL', 'armR'] : [k];
+    for (const id of ids) {
+      const el = document.getElementById(id); el.innerHTML = ''; el.classList.remove('emoji');
+      const im = new Image(); im.src = `assets/robot/${k}${i}.png`; im.alt = ''; im.onerror = () => { el.textContent = emoji; el.classList.add('emoji'); };
+      el.appendChild(im); animate(el, 'pop', 300);
+    }
+    state.chosen[k] = i;
+    palette.querySelectorAll(`.pal[data-k="${k}"]`).forEach(x => x.classList.toggle('on', Number(x.dataset.i) === i));
+    tone({ type: 'square', f0: 300 + i * 150, f1: 500 + i * 150, dur: 0.12, gain: 0.12, lowpass: 2500 });
+  }
+  function reset() {
+    state.busy = false; state.chosen = {}; bot.classList.remove('dance');
+    ['head', 'body', 'armL', 'armR', 'legs'].forEach(id => { document.getElementById(id).innerHTML = ''; });
+    palette.querySelectorAll('.pal').forEach(x => x.classList.remove('on'));
+    say('パーツを えらんで ロボットを つくろう');
+  }
+  palette.addEventListener('pointerdown', (e) => {
+    const d = e.target.closest('.pal'); if (!d || state.busy) return; e.preventDefault();
+    const kind = KINDS.find(k => k[0] === d.dataset.k);
+    put(d.dataset.k, Number(d.dataset.i), kind[2]); burst(e.clientX, e.clientY, 4); say(kind[1]);
+  });
+  document.getElementById('go').addEventListener('pointerdown', (e) => {
+    e.preventDefault(); if (state.busy) return;
+    if (KINDS.some(k => !state.chosen[k[0]])) { SFX.wrong(); say('ぜんぶの パーツを つけてね'); return; }
+    state.busy = true; bot.classList.add('dance');
+    for (let i = 0; i < 12; i++) tone({ type: 'square', f0: [400, 600, 500, 800][i % 4], dur: 0.12, gain: 0.1, at: i * 0.25, lowpass: 3000 });
+    Baby.say('ロボット、 かんせい！ うごくよ！', { delay: 200 }).then(() => new Promise(r => setTimeout(r, 1500))).then(() => { SFX.fanfare(); cheer('🤖'); celebrate(); return win(reset); });
+  });
+  setupStart(() => setTimeout(reset, 300));
+  setupHome();
+
+})();
+</script>
+</body>
+</html>
