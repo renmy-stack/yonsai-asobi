@@ -17,6 +17,10 @@
   .sq.ev { background: #ffe0b2; } .sq.good { background: #c8e6c9; } .sq.bad { background: #ffcdd2; }
   .sq .n { position: absolute; top: 2px; left: 6px; font-size: 11px; color: #aaa; }
   .sq .p { position: absolute; font-size: min(8vw, 36px); transition: all .3s; }
+  .sq .sqpic { width: 55%; height: 55%; display: flex; align-items: center; justify-content: center; }
+  .sq .sqpic img { width: 100%; height: 100%; object-fit: contain; }
+  .sq .tok { display: flex; width: min(9vw, 40px); height: min(9vw, 40px); }
+  .sq .tok img { width: 100%; height: 100%; object-fit: contain; }
   .sq .p.me { left: 4px; bottom: 2px; } .sq .p.cpu { right: 4px; bottom: 2px; }
   #ctrl { display: flex; align-items: center; justify-content: center; gap: 14px; height: 15%; }
   #dice { width: 84px; height: 84px; border-radius: 20px; border: none; background: #fff; box-shadow: 0 6px 0 rgba(0,0,0,.15); font-size: 48px; touch-action: none; }
@@ -45,13 +49,13 @@
   const N = 20;
   const READ = ['', 'いち', 'に', 'さん', 'よん', 'ご', 'ろく'];
   const EVENTS = [
-    { icon: '➕', cls: 'good', move: 2, line: '2ます すすむ！' },
-    { icon: '➖', cls: 'bad', move: -1, line: '1ます もどる' },
-    { icon: '🐶', cls: 'ev', line: 'いぬの まねを してみよう！' },
-    { icon: '🎵', cls: 'ev', line: 'うたを うたおう！' },
-    { icon: '🐘', cls: 'ev', line: 'ぞうさんの まねを してみよう！' },
-    { icon: '⭐', cls: 'good', move: 1, line: 'ラッキー！ 1ます すすむ' },
-    { icon: '🐸', cls: 'ev', line: 'かえるみたいに ジャンプ！' },
+    { icon: '➕', img: 'assets/misc/plus.png', cls: 'good', move: 2, line: '2ます すすむ！' },
+    { icon: '➖', img: 'assets/misc/minus.png', cls: 'bad', move: -1, line: '1ます もどる' },
+    { icon: '🐶', img: 'assets/animals/dog.png', cls: 'ev', line: 'いぬの まねを してみよう！' },
+    { icon: '🎵', img: 'assets/misc/note.png', cls: 'ev', line: 'うたを うたおう！' },
+    { icon: '🐘', img: 'assets/animals/elephant.png', cls: 'ev', line: 'ぞうさんの まねを してみよう！' },
+    { icon: '⭐', img: 'assets/misc/star.png', cls: 'good', move: 1, line: 'ラッキー！ 1ます すすむ' },
+    { icon: '🐸', img: 'assets/animals/frog.png', cls: 'ev', line: 'かえるみたいに ジャンプ！' },
   ];
   const board = document.getElementById('board');
   const dice = document.getElementById('dice');
@@ -67,16 +71,22 @@
     order.forEach((cellIdx, i) => {
       const sq = document.createElement('div'); sq.className = 'sq';
       let ev = null;
-      if (i === 0) sq.textContent = '🚩'; else if (i === N - 1) sq.textContent = '🏁';
-      else if (Math.random() < 0.4) { ev = pick(EVENTS); sq.textContent = ev.icon; sq.classList.add(ev.cls); }
-      sq.innerHTML += `<span class="n">${i + 1}</span><span class="p me"></span><span class="p cpu"></span>`;
+      if (i === 0) sq.appendChild(Baby.pic('assets/misc/flag-start.png', '🚩', 'sqpic')); else if (i === N - 1) sq.appendChild(Baby.pic('assets/misc/flag-goal.png', '🏁', 'sqpic'));
+      else if (Math.random() < 0.4) { ev = pick(EVENTS); sq.appendChild(Baby.pic(ev.img, ev.icon, 'sqpic')); sq.classList.add(ev.cls); }
+      const n = document.createElement('span'); n.className = 'n'; n.textContent = i + 1;
+      const me = document.createElement('span'); me.className = 'p me'; const cpu = document.createElement('span'); cpu.className = 'p cpu';
+      sq.append(n, me, cpu);
       cells[cellIdx] = sq; state.squares[i] = { el: sq, ev };
     });
     cells.forEach(c => board.appendChild(c));
     draw();
   }
   function draw() {
-    state.squares.forEach((s, i) => { s.el.querySelector('.me').textContent = state.pos[0] === i ? '👦' : ''; s.el.querySelector('.cpu').textContent = state.pos[1] === i ? '🟢' : ''; });
+    state.squares.forEach((s, i) => {
+      const me = s.el.querySelector('.me'), cpu = s.el.querySelector('.cpu'); me.innerHTML = ''; cpu.innerHTML = '';
+      if (state.pos[0] === i) me.appendChild(Baby.pic('assets/misc/child.png', '👦', 'tok'));
+      if (state.pos[1] === i) cpu.appendChild(Baby.pic('assets/icons/zundamon.png', '🟢', 'tok'));
+    });
   }
   async function move(who, n) {
     for (let i = 0; i < n && state.pos[who] < N - 1; i++) {

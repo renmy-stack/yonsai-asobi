@@ -54,7 +54,8 @@
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
     touch-action: none;
   }
-  .tab .ic { font-size: 22px; line-height: 1; }
+  .tab .ic { font-size: 22px; line-height: 1; height: 26px; display: flex; align-items: center; justify-content: center; }
+  .tab .ic img { height: 26px; width: 26px; object-fit: contain; }
   .tab.on { background: #fff; border-color: var(--edge, #ffb74d); box-shadow: 0 4px 0 var(--edge, #ffb74d); transform: translateY(-2px); }
   .tab[data-cat="kazu"]    { --edge: #ffb74d; }
   .tab[data-cat="atama"]   { --edge: #ff8a65; }
@@ -127,7 +128,7 @@
   for (const c of CATEGORIES) {
     const b = document.createElement('button');
     b.className = 'tab'; b.type = 'button'; b.dataset.cat = c.id;
-    b.innerHTML = `<span class="ic">${c.icon}</span>${c.name}`;
+    b.appendChild(Baby.pic(`assets/misc/tab-${c.id}.png`, c.icon, 'ic')); b.appendChild(document.createTextNode(c.name));
     b.addEventListener('pointerdown', (e) => { e.preventDefault(); Baby.ensureAudio(); Baby.SFX.flip(); show(c.id); });
     tabs.appendChild(b);
   }

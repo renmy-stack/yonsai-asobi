@@ -135,6 +135,24 @@ OPP = [
     ('atsui', 'a sweating sun on a hot summer day with a melting ice cream'), ('samui', 'a shivering snowman in falling snow'), ('ue', 'a cat sitting on top of a table'), ('shita', 'a cat sitting under a table'),
 ]
 
+MISC = [
+    # M1
+    ('basket', 'a woven wicker basket seen from the front'), ('caterpillar', 'a green caterpillar'), ('bee', 'a bee'), ('rock', 'a gray rock'),
+    ('house-small', 'a small house with a red roof'), ('note', 'a music note'), ('star', 'a yellow star'), ('flag-start', 'a red triangular flag on a pole'),
+    # M2
+    ('hand-rock', 'a hand making a fist (rock in rock-paper-scissors), front view'), ('hand-scissors', 'a hand making scissors (two fingers up), front view'),
+    ('hand-paper', 'an open hand palm forward (paper), front view'), ('child', 'a cute smiling child face with round cheeks'),
+    ('flag-goal', 'a black-and-white checkered goal flag on a pole'), ('plus', 'a big bold green plus sign'), ('minus', 'a big bold red minus sign'), ('bush1', 'a round green bush'),
+    # M3
+    ('balloon-red', 'a red balloon with a string'), ('balloon-yellow', 'a yellow balloon with a string'), ('balloon-green', 'a green balloon with a string'),
+    ('balloon-blue', 'a blue balloon with a string'), ('balloon-pink', 'a pink balloon with a string'), ('balloon-purple', 'a purple balloon with a string'),
+    ('bush2', 'a round dark green bush with small flowers'), ('bush3', 'a round orange autumn bush'),
+    # M4
+    ('tab-kazu', 'three colorful number blocks showing dots'), ('tab-atama', 'a cute light bulb with a smiling face'), ('tab-kotoba', 'an open picture book'),
+    ('tab-ugoki', 'a bouncing rubber ball with motion lines'), ('tab-tsukuru', 'a paint palette with a brush'),
+    ('box-animals', 'a small doghouse with an open door'), ('box-vehicles', 'a small garage with an open door'), ('box-foods', 'an open refrigerator'),
+]
+
 STYLE = ('Generate an image (wide landscape). A sprite sheet arranged in a strict {cols} columns x {rows} rows grid of equal cells, '
          'each picture centered in its own cell with generous margin, plain solid white background, no grid lines, no text, no letters, no shadows. '
          'Style: kawaii flat vector illustration, thick rounded dark outlines, soft bright pastel colors, cute smiling faces where natural. ')
@@ -154,6 +172,19 @@ def opp_prompt(n):
     txt += "Bottom row left to right: " + ", ".join(f"({i + 5}) {w[1]}" for i, w in enumerate(items[4:])) + "."
     return txt
 
+def misc_prompt(n):
+    items = MISC[n * 8:(n + 1) * 8]
+    txt = STYLE.format(cols=4, rows=2)
+    txt += "Top row left to right: " + ", ".join(f"({i + 1}) {w[1]}" for i, w in enumerate(items[:4])) + ". "
+    txt += "Bottom row left to right: " + ", ".join(f"({i + 5}) {w[1]}" for i, w in enumerate(items[4:])) + "."
+    return txt
+
+def misc_split(n, path):
+    here = os.path.dirname(os.path.abspath(__file__))
+    names = [w[0] for w in MISC[n * 8:(n + 1) * 8]]; out = os.path.join(here, '..', 'assets', 'misc')
+    os.makedirs(out, exist_ok=True)
+    subprocess.check_call([sys.executable, os.path.join(here, 'split_sheet.py'), path, out, *names, '--cols', '4', '--rows', '2', '--size', '320'])
+
 def split(n, path, opp=False):
     here = os.path.dirname(os.path.abspath(__file__))
     if opp:
@@ -169,4 +200,6 @@ if __name__ == '__main__':
     elif cmd == 'opp-prompt': print(opp_prompt(int(sys.argv[2])))
     elif cmd == 'split': split(int(sys.argv[2]), sys.argv[3])
     elif cmd == 'opp-split': split(int(sys.argv[2]), sys.argv[3], opp=True)
+    elif cmd == 'misc-prompt': print(misc_prompt(int(sys.argv[2])))
+    elif cmd == 'misc-split': misc_split(int(sys.argv[2]), sys.argv[3])
     elif cmd == 'count': print(len(WORDS), (len(WORDS) + PER - 1) // PER)

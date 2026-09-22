@@ -13,7 +13,9 @@
 <style>
   body { background: linear-gradient(180deg, #e8f5e9 0%, #f7fff8 100%); }
   #cpu { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
-  #cpu .hand { font-size: min(30vmin, 150px); line-height: 1; }
+  #cpu .hand { font-size: min(30vmin, 150px); line-height: 1; height: 70%; display: flex; align-items: center; justify-content: center; }
+  #cpu .hand img, .choice .hand img { height: 100%; object-fit: contain; }
+  .choice .hand { height: 65%; display: flex; align-items: center; justify-content: center; }
   #cpu .hand.shake { animation: shake .3s infinite; }
   #cpu .name { font-size: 16px; color: #789; font-weight: bold; }
   #res { font-size: min(9vw, 40px); font-weight: bold; color: #e65100; min-height: 48px; text-align: center; }
@@ -32,9 +34,9 @@
   <div id="cpu"><div class="name">ずんだもん</div><div class="hand" id="cpuHand">🟢</div></div>
   <div id="res"></div>
   <div class="choices" id="choices">
-    <div class="choice" data-h="0">✊<small>ぐー</small></div>
-    <div class="choice" data-h="1">✌️<small>ちょき</small></div>
-    <div class="choice" data-h="2">✋<small>ぱー</small></div>
+    <div class="choice" data-h="0"><small>ぐー</small></div>
+    <div class="choice" data-h="1"><small>ちょき</small></div>
+    <div class="choice" data-h="2"><small>ぱー</small></div>
   </div>
 </div>
 
@@ -45,7 +47,9 @@
 (() => {
   'use strict';
   const { SFX, say, burst, animate, celebrate, cheer, setupStart, setupHome } = Baby;
-  const HANDS = ['✊', '✌️', '✋'], NAMES = ['ぐー', 'ちょき', 'ぱー'];
+  const HANDS = ['✊', '✌️', '✋'], NAMES = ['ぐー', 'ちょき', 'ぱー'], HIMG = ['assets/misc/hand-rock.png', 'assets/misc/hand-scissors.png', 'assets/misc/hand-paper.png'];
+  document.querySelectorAll('#choices .choice').forEach((c, i) => c.prepend(Baby.pic(HIMG[i], HANDS[i], 'hand')));
+  const showHand = (i) => { cpuHand.innerHTML = ''; cpuHand.appendChild(i == null ? Baby.pic('assets/icons/zundamon.png', '🟢', 'hand') : Baby.pic(HIMG[i], HANDS[i], 'hand')); };
   const RULE = ['ぐーは ちょきに かつ', 'ちょきは ぱーに かつ', 'ぱーは ぐーに かつ'];
   const cpuHand = document.getElementById('cpuHand');
   const res = document.getElementById('res');
@@ -53,7 +57,7 @@
   const state = { busy: false, wins: Baby.getLevel() };
 
   function ready() {
-    state.busy = false; cpuHand.textContent = '🟢'; cpuHand.classList.add('shake'); res.textContent = '';
+    state.busy = false; showHand(null); cpuHand.classList.add('shake'); res.textContent = '';
     say('じゃんけん ぽん！');
   }
   document.getElementById('choices').addEventListener('pointerdown', async (e) => {
@@ -61,7 +65,7 @@
     e.preventDefault(); state.busy = true;
     const me = Number(c.dataset.h), cpu = Math.floor(Math.random() * 3);
     burst(e.clientX, e.clientY, 5);
-    cpuHand.classList.remove('shake'); cpuHand.textContent = HANDS[cpu];
+    cpuHand.classList.remove('shake'); showHand(cpu);
     say(`${NAMES[me]}と ${NAMES[cpu]}`);
     await new Promise(r => setTimeout(r, 1300));
     if (me === cpu) {

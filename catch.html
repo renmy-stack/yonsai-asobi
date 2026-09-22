@@ -18,6 +18,10 @@
   .drop img { width: 100%; height: 100%; object-fit: contain; }
   #basket { position: absolute; bottom: 2%; left: 50%; width: 26%; aspect-ratio: 1.4; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; font-size: min(18vw, 90px); line-height: 1; }
   #basket.got { animation: bounce .4s; }
+  #basket .pic { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+  #basket .pic img { width: 100%; height: 100%; object-fit: contain; }
+  .drop .pic { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+  .drop .pic img { width: 100%; height: 100%; object-fit: contain; }
   #result { position: fixed; inset: 0; z-index: 35; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(255,250,220,.95); font-size: 28px; font-weight: bold; color: #5d4037; }
   #result.show { display: flex; }
   #result .big { font-size: 80px; }
@@ -30,7 +34,7 @@
 
 <div id="stage">
   <div id="hud"><span id="score">0</span><span id="time">30</span></div>
-  <div id="field"><div id="basket">🧺</div></div>
+  <div id="field"><div id="basket"></div></div>
 </div>
 <div id="result"><div class="big">🎉</div><div id="resText"></div><button id="again" type="button">もういっかい</button></div>
 
@@ -47,7 +51,8 @@
   const scoreEl = document.getElementById('score'), timeEl = document.getElementById('time');
   const result = document.getElementById('result');
   const FOODS = CATALOG.foods.items;
-  const BUGS = ['🐛', '🐝', '🪨'];
+  const BUGS = [['caterpillar', '🐛'], ['bee', '🐝'], ['rock', '🪨']];
+  basket.appendChild(Baby.pic('assets/misc/basket.png', '🧺'));
   const state = { score: 0, time: 30, running: false, drops: [], raf: 0, spawner: null, timer: null, x: 0.5, round: Baby.getLevel() };
 
   // カゴは指の横位置についてくる
@@ -59,7 +64,7 @@
     const bad = Math.random() < 0.2;
     const el = document.createElement('div'); el.className = 'drop';
     let item = null;
-    if (bad) el.textContent = pick(BUGS);
+    if (bad) { const b = pick(BUGS); el.appendChild(Baby.pic(`assets/misc/${b[0]}.png`, b[1])); }
     else { item = pick(FOODS); el.innerHTML = `<img src="${CATALOG.foods.dir}/${item.id}.png" alt="">`; }
     el.style.left = `${8 + Math.random() * 80}%`;
     field.appendChild(el);

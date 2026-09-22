@@ -18,6 +18,7 @@
   .hole::after { content: ""; position: absolute; left: 10%; right: 10%; bottom: 0; height: 28%; border-radius: 50%; background: #5d4037; box-shadow: inset 0 6px 0 rgba(0,0,0,.25); }
   .hole .who { position: absolute; left: 15%; width: 70%; bottom: 10%; height: 75%; display: flex; align-items: flex-end; justify-content: center; transform: translateY(110%); transition: transform .18s ease-out; z-index: 1; font-size: min(14vmin, 70px); line-height: 1; }
   .hole .who img { width: 100%; height: 100%; object-fit: contain; }
+  .hole .who .pic { width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
   .hole.up .who { transform: translateY(0); }
   .hole.hit .who { transform: translateY(110%) scale(.8); transition: transform .12s; }
   #result { position: fixed; inset: 0; z-index: 35; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(255,250,220,.95); font-size: 28px; font-weight: bold; color: #5d4037; }
@@ -62,7 +63,8 @@
     const h = pick(free);
     const bee = Math.random() < 0.2;                 // 2割はハチ（たたいたらダメ）
     h.who = bee ? { bee: true } : { bee: false, item: pick(ANIMALS) };
-    h.el.querySelector('.who').innerHTML = bee ? '🐝' : `<img src="${CATALOG.animals.dir}/${h.who.item.id}.png" alt="">`;
+    const who = h.el.querySelector('.who'); who.innerHTML = '';
+    if (bee) who.appendChild(Baby.pic('assets/misc/bee.png', '🐝')); else who.innerHTML = `<img src="${CATALOG.animals.dir}/${h.who.item.id}.png" alt="">`;
     h.el.classList.remove('hit'); void h.el.offsetWidth;
     h.el.classList.add('up');
     tone({ type: 'sine', f0: 400, f1: 700, dur: 0.1, gain: 0.08 });

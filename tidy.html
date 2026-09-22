@@ -19,6 +19,8 @@
   #boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; height: 26%; }
   .box { border-radius: 22px; background: #fff; box-shadow: 0 6px 0 rgba(0,0,0,.1); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: min(12vw, 52px); line-height: 1; border: 4px solid transparent; }
   .box small { font-size: 14px; color: #789; font-weight: bold; margin-top: 4px; }
+  .box .bpic { height: 60%; display: flex; align-items: center; justify-content: center; }
+  .box .bpic img { height: 100%; object-fit: contain; }
   .box.over { border-color: #ffb74d; background: #fff6b3; }
   .box.got { animation: bounce .5s; }
 </style>
@@ -32,9 +34,9 @@
   <div class="stars" id="stars"></div>
   <div id="floor"></div>
   <div id="boxes">
-    <div class="box" data-set="animals">🏠<small>どうぶつ</small></div>
-    <div class="box" data-set="vehicles">🚗<small>のりもの</small></div>
-    <div class="box" data-set="foods">🧊<small>たべもの</small></div>
+    <div class="box" data-set="animals"><small>どうぶつ</small></div>
+    <div class="box" data-set="vehicles"><small>のりもの</small></div>
+    <div class="box" data-set="foods"><small>たべもの</small></div>
   </div>
 </div>
 
@@ -50,6 +52,8 @@
   const boxes = document.getElementById('boxes');
   const stars = document.getElementById('stars');
   const state = { queue: [], cur: null, done: 0, score: Baby.getLevel(), drag: null };
+  const BOXPIC = { animals: ['assets/misc/box-animals.png', '🏠'], vehicles: ['assets/misc/box-vehicles.png', '🚗'], foods: ['assets/misc/box-foods.png', '🧊'] };
+  [...boxes.children].forEach(b => b.prepend(Baby.pic(BOXPIC[b.dataset.set][0], BOXPIC[b.dataset.set][1], 'bpic')));
 
   function newRound() {
     state.queue = shuffle(allItems()).slice(0, 6); state.done = 0;

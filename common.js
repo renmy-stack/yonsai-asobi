@@ -283,6 +283,15 @@ window.Baby = (() => {
     el.addEventListener('animationend', () => el.classList.remove('show'), { once: true });
   }
 
+  // 画像（assets/...）を表示し、無ければ絵文字などの代わりを出す
+  function pic(src, fallback, cls = 'pic') {
+    const span = document.createElement('span'); span.className = cls;
+    const img = document.createElement('img'); img.src = src; img.alt = ''; img.draggable = false;
+    img.onerror = () => { span.textContent = fallback; span.classList.add('emoji'); };
+    span.appendChild(img);
+    return span;
+  }
+
   // アニメーション用クラスを付け直す
   function animate(el, cls, ms = 900) {
     el.classList.remove(cls);
@@ -314,6 +323,9 @@ window.Baby = (() => {
   function setupStart(onStart) {
     const start = document.getElementById('start');
     if (!start) return;
+    // 起動画面の絵は、そのゲームのアイコン（無ければ絵文字のまま）
+    const big = start.querySelector('.big');
+    if (big) { const im = new Image(); im.src = `assets/icons/${gameId}.png`; im.alt = ''; im.onload = () => { big.textContent = ''; big.appendChild(im); }; }
     start.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       ensureAudio();
@@ -455,5 +467,5 @@ window.Baby = (() => {
   setTimeout(checkTimer, 1000);
   if (gameId !== 'index' && gameId !== 'parent' && gameId !== 'stickers') track('play');
 
-  return { fresh, load, save, track, reward, stickerCount, gameId, getLevel, setLevel, praise, prime, STICKERS, RARE, ensureAudio, tone, noise, SFX, say, sayThen, hush, preloadVoice, burst, celebrate, cheer, animate, holdButton, setupStart, setupHome, shuffle, pick };
+  return { pic, fresh, load, save, track, reward, stickerCount, gameId, getLevel, setLevel, praise, prime, STICKERS, RARE, ensureAudio, tone, noise, SFX, say, sayThen, hush, preloadVoice, burst, celebrate, cheer, animate, holdButton, setupStart, setupHome, shuffle, pick };
 })();

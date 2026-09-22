@@ -21,7 +21,9 @@
   .tile.lit { background: #dcedc8; }
   #car { position: absolute; width: 14%; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; z-index: 3; }
   #car img { width: 100%; height: 100%; object-fit: contain; }
-  .mark { position: absolute; font-size: min(7vw, 30px); z-index: 2; pointer-events: none; transform: translate(-50%, -50%); }
+  .mark { position: absolute; font-size: min(7vw, 30px); z-index: 2; pointer-events: none; transform: translate(-50%, -50%); width: 12%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+  .mark .mpic { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+  .mark .mpic img { width: 100%; height: 100%; object-fit: contain; }
 </style>
 </head>
 <body>
@@ -93,9 +95,9 @@
       const d = document.createElement('div'); d.className = 'tile'; d.dataset.x = x; d.dataset.y = y;
       d.innerHTML = tileSvg(state.tiles[y][x]); grid.appendChild(d);
     }
-    const mark = (pos, txt, cls) => { const m = document.createElement('div'); m.className = 'mark'; m.textContent = txt; m.style.left = `${(pos[0] + 0.5) / n * 100}%`; m.style.top = `${(pos[1] + 0.5) / n * 100}%`; grid.appendChild(m); };
-    mark([state.start[0] - 0.55, state.start[1]], '🚗');
-    mark([state.goal[0] + 0.55, state.goal[1]], '🏠');
+    const mark = (pos, src, txt) => { const m = document.createElement('div'); m.className = 'mark'; m.appendChild(Baby.pic(src, txt, 'mpic')); m.style.left = `${(pos[0] + 0.5) / n * 100}%`; m.style.top = `${(pos[1] + 0.5) / n * 100}%`; grid.appendChild(m); };
+    mark([state.start[0] - 0.55, state.start[1]], 'assets/vehicles/car.png', '🚗');
+    mark([state.goal[0] + 0.55, state.goal[1]], 'assets/misc/house-small.png', '🏠');
   }
   // つながっているか（スタートから右方向へ入って辿る）
   function trace() {
