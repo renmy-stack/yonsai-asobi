@@ -137,20 +137,21 @@ OPP = [
 
 MISC = [
     # M1
-    ('basket', 'a woven wicker basket seen from the front'), ('caterpillar', 'a green caterpillar'), ('bee', 'a bee'), ('rock', 'a gray rock'),
-    ('house-small', 'a small house with a red roof'), ('note', 'a music note'), ('star', 'a yellow star'), ('flag-start', 'a red triangular flag on a pole'),
+    ('bee', 'a bee'), ('house-small', 'a small house with a red roof'), ('note', 'a music note'), ('star', 'a yellow star'),
+    ('flag-start', 'a red triangular flag on a pole'), ('hand-rock', 'a hand making a fist (rock in rock-paper-scissors), front view'),
+    ('hand-scissors', 'a hand making scissors (two fingers up), front view'), ('hand-paper', 'an open hand palm forward (paper), front view'),
     # M2
-    ('hand-rock', 'a hand making a fist (rock in rock-paper-scissors), front view'), ('hand-scissors', 'a hand making scissors (two fingers up), front view'),
-    ('hand-paper', 'an open hand palm forward (paper), front view'), ('child', 'a cute smiling child face with round cheeks'),
-    ('flag-goal', 'a black-and-white checkered goal flag on a pole'), ('plus', 'a big bold green plus sign'), ('minus', 'a big bold red minus sign'), ('bush1', 'a round green bush'),
-    # M3
+    ('child', 'a cute smiling child face with round cheeks'), ('flag-goal', 'a black-and-white checkered goal flag on a pole'),
+    ('plus', 'a big bold green plus sign'), ('minus', 'a big bold red minus sign'), ('bush1', 'a round green bush'),
     ('balloon-red', 'a red balloon with a string'), ('balloon-yellow', 'a yellow balloon with a string'), ('balloon-green', 'a green balloon with a string'),
+    # M3
     ('balloon-blue', 'a blue balloon with a string'), ('balloon-pink', 'a pink balloon with a string'), ('balloon-purple', 'a purple balloon with a string'),
     ('bush2', 'a round dark green bush with small flowers'), ('bush3', 'a round orange autumn bush'),
-    # M4
     ('tab-kazu', 'three colorful number blocks showing dots'), ('tab-atama', 'a cute light bulb with a smiling face'), ('tab-kotoba', 'an open picture book'),
+    # M4
     ('tab-ugoki', 'a bouncing rubber ball with motion lines'), ('tab-tsukuru', 'a paint palette with a brush'),
     ('box-animals', 'a small doghouse with an open door'), ('box-vehicles', 'a small garage with an open door'), ('box-foods', 'an open refrigerator'),
+    ('heart', 'a red heart'), ('cloud', 'a fluffy white cloud'), ('rainbow', 'a rainbow'),
 ]
 
 STYLE = ('Generate an image (wide landscape). A sprite sheet arranged in a strict {cols} columns x {rows} rows grid of equal cells, '
@@ -191,6 +192,7 @@ def split(n, path, opp=False):
         names = [w[0] for w in OPP[n * 8:(n + 1) * 8]]; out = os.path.join(here, '..', 'assets', 'opposite'); cols, rows = 4, 2
     else:
         items = WORDS[n * PER:(n + 1) * PER]; names = [w[1] for w in items]; out = os.path.join(here, '..', 'assets', 'words'); cols, rows = 5, (len(items) + 4) // 5
+        if n == 7: names = names + ['misc-basket', 'misc-caterpillar', 'misc-rock']   # 最後のシートには「その他」の3枚を同居させた
     os.makedirs(out, exist_ok=True)
     subprocess.check_call([sys.executable, os.path.join(here, 'split_sheet.py'), path, out, *names, '--cols', str(cols), '--rows', str(rows), '--size', '320'] + (['--keep-all'] if opp else []))
 
