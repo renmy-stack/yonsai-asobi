@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#eceff1">
-<link rel="stylesheet" href="common.css?v=20260922g">
+<link rel="stylesheet" href="common.css?v=202609221429">
 <style>
   html, body { touch-action: pan-y; }
   body { background: #eceff1; color: #37474f; font-size: 15px; }
@@ -74,10 +74,13 @@
   </section>
 
   <section>
-    <h2 style="margin-top:0">データ</h2>
-    <div class="row">
-      <button class="btn danger" id="clearLog" type="button">きろくを けす（長押し）</button>
-      <button class="btn danger" id="clearAll" type="button">シールも ぜんぶ けす（長押し）</button>
+    <h2 style="margin-top:0">データを けす</h2>
+    <p class="note">どれも長押しで実行。タイトルやタイマーの設定は消えません。</p>
+    <div class="row" style="flex-direction:column;align-items:stretch;gap:10px">
+      <div><button class="btn danger" id="clearLog" type="button">あそんだ きろくを けす（長押し）</button><span class="note"> 回数・時間・正解率</span></div>
+      <div><button class="btn danger" id="clearLevel" type="button">レベルを ぜんぶ もどす（長押し）</button><span class="note"> 全ゲームをレベル1に</span></div>
+      <div><button class="btn danger" id="clearSticker" type="button">シールを ぜんぶ けす（長押し）</button><span class="note"> シール帳を空に</span></div>
+      <div><button class="btn danger" id="clearAll" type="button">ぜんぶ けす（長押し）</button><span class="note"> 上の3つをまとめて</span></div>
     </div>
   </section>
 
@@ -89,9 +92,9 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=20260922g"></script>
-<script src="games.js?v=20260922g"></script>
-<script src="catalog.js?v=20260922g"></script>
+<script src="common.js?v=202609221429"></script>
+<script src="games.js?v=202609221429"></script>
+<script src="catalog.js?v=202609221429"></script>
 <script>
 (() => {
   'use strict';
@@ -201,8 +204,13 @@
   }
 
   // ---- データ消去 ----
-  holdButton(document.getElementById('clearLog'), () => { const dd = load(); dd.log = {}; save(dd); location.reload(); }, 1500);
-  holdButton(document.getElementById('clearAll'), () => { const dd = load(); dd.log = {}; dd.stickers = []; save(dd); location.reload(); }, 1500);
+  // 何を消すかを明示: きろく＝回数・時間・正解率、レベル＝到達度と「レベルアップ済み」の記録、シール＝シールと「全部集めた」記録
+  const wipe = { log: (dd) => { dd.log = {}; dd.days = {}; }, level: (dd) => { dd.levels = {}; dd.seenLevel = {}; }, sticker: (dd) => { dd.stickers = []; delete dd.completed; } };
+  const doWipe = (...kinds) => { const dd = load(); kinds.forEach(k => wipe[k](dd)); save(dd); SFX.pop(); location.reload(); };
+  holdButton(document.getElementById('clearLog'), () => doWipe('log'), 1500);
+  holdButton(document.getElementById('clearLevel'), () => doWipe('level'), 1500);
+  holdButton(document.getElementById('clearSticker'), () => doWipe('sticker'), 1500);
+  holdButton(document.getElementById('clearAll'), () => doWipe('log', 'level', 'sticker'), 1500);
 
   setupHome();
 })();
