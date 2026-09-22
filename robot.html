@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#eceff1">
-<link rel="stylesheet" href="common.css?v=202609222116">
-<link rel="stylesheet" href="game.css?v=202609222116">
+<link rel="stylesheet" href="common.css?v=202609222121">
+<link rel="stylesheet" href="game.css?v=202609222121">
 <style>
   body { background: linear-gradient(180deg, #eceff1 0%, #ffffff 100%); }
 
@@ -21,9 +21,9 @@
   #head { z-index: 2; } #body { z-index: 1; } #legs { z-index: 0; }
   #bot.dance { animation: dance .5s ease-in-out 6; } @keyframes dance { 0%, 100% { transform: rotate(0) translateY(0); } 25% { transform: rotate(-6deg) translateY(-6%); } 75% { transform: rotate(6deg) translateY(-6%); } }
   #palette { height: min(30vh, 200px); display: grid; grid-template-rows: repeat(4, 1fr); gap: 6px; }
-  .prow { display: grid; grid-template-columns: 64px repeat(3, 1fr); gap: 6px; min-height: 0; }
+  .prow { display: grid; grid-template-columns: 64px repeat(3, minmax(0, 1fr)); gap: 6px; min-height: 0; }
   .prow .lab { display: flex; align-items: center; justify-content: center; font-weight: bold; color: #789; font-size: 15px; }
-  .pal { border-radius: 14px; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; min-height: 0; }
+  .pal { min-width: 0; border-radius: 14px; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; min-height: 0; }
   .pal.on { background: #fff6b3; box-shadow: 0 0 0 3px #ffd84d; }
   .pal .pic { width: 80%; height: 84%; display: flex; align-items: center; justify-content: center; } .pal .pic img { width: 100%; height: 100%; object-fit: contain; } .pal .pic.emoji { font-size: 26px; }
   #go { align-self: center; height: 46px; padding: 0 26px; border: none; border-radius: 24px; background: #ffd84d; font-size: 20px; font-weight: bold; color: #345; font-family: inherit; box-shadow: 0 5px 0 rgba(0,0,0,.12); }
@@ -44,8 +44,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609222116"></script>
-<script src="catalog.js?v=202609222116"></script>
+<script src="common.js?v=202609222121"></script>
+<script src="catalog.js?v=202609222121"></script>
 <script>
 (() => {
   'use strict';

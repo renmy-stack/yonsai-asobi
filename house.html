@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e8f5e9">
-<link rel="stylesheet" href="common.css?v=202609222116">
-<link rel="stylesheet" href="game.css?v=202609222116">
+<link rel="stylesheet" href="common.css?v=202609222121">
+<link rel="stylesheet" href="game.css?v=202609222121">
 <style>
   body { background: linear-gradient(180deg, #e8f5e9 0%, #ffffff 100%); }
 
@@ -20,8 +20,8 @@
   /* 正方形の「しきち」の中に％で置く（画面の縦横比が変わっても崩れない） */
   #lot { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 300px; height: 300px; }
   /* 各パーツの位置は JS の layout() が絵の縦横比から計算する */
-  #palette { height: min(30vh, 190px); overflow-y: auto; touch-action: pan-y; display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-  .pal { aspect-ratio: 1; border-radius: 14px; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; }
+  #palette { height: min(30vh, 190px); overflow-y: auto; touch-action: pan-y; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }   /* minmax(0,…) で絵の元サイズに引きずられて広がらないように */
+  .pal { aspect-ratio: 1; min-width: 0; border-radius: 14px; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; }
   .pal.on { background: #fff6b3; box-shadow: 0 0 0 3px #ffd84d; }
   .pal .pic { width: 84%; height: 84%; display: flex; align-items: center; justify-content: center; } .pal .pic img { width: 100%; height: 100%; object-fit: contain; } .pal .pic.emoji { font-size: 28px; }
   #done { align-self: center; height: 46px; padding: 0 26px; border: none; border-radius: 24px; background: #ffd84d; font-size: 20px; font-weight: bold; color: #345; font-family: inherit; box-shadow: 0 5px 0 rgba(0,0,0,.12); }
@@ -42,8 +42,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609222116"></script>
-<script src="catalog.js?v=202609222116"></script>
+<script src="common.js?v=202609222121"></script>
+<script src="catalog.js?v=202609222121"></script>
 <script>
 (() => {
   'use strict';
