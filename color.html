@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#f4f4f4">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #f4f4f4 0%, #e9e9ef 100%); }
   #swatch {
@@ -38,8 +38,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -61,7 +61,7 @@
     const others = [];
     for (const p of shuffled.slice(1)) {
       if (p.item.color !== state.color && !others.some(o => o.item.color === p.item.color)) others.push(p);
-      if (others.length === 2) break;
+      if (others.length === [0, 2, 2, 3, 3, 5][Baby.level()]) break;
     }
     state.opts = shuffle([state.target, ...others]);
     const col = COLORS[state.color];
@@ -69,6 +69,7 @@
     swatch.textContent = col.name;
     question.textContent = `${col.name}のは どれ？`;
     Baby.prime([`${col.name}の`, `${state.target.item.name}！`, ...state.opts.map(p => [`${p.item.name}は`, `${COLORS[p.item.color].name}だね。`]).flat(), `${col.name}は どれかな？`]);
+    choices.className = 'choices' + ({ 3: '', 4: ' four', 6: ' six' }[state.opts.length] || '');
     choices.innerHTML = '';
     for (const p of state.opts) {
       const c = document.createElement('div');

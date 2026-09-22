@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#f3e5f5">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #f3e5f5 0%, #fbf5fc 100%); }
   #word { flex: 0.6; min-height: 0; display: flex; align-items: center; justify-content: center; font-size: min(11vw, 52px); font-weight: bold; color: #6a1b9a; }
@@ -42,8 +42,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -76,14 +76,18 @@
     state.ask = askA ? state.pair.a : state.pair.b;
     state.ans = askA ? state.pair.b : state.pair.a;
     const p = pick(allItems());
-    const order = shuffle([0, 1]);                 // 0 = a の絵, 1 = b の絵
-    state.ansIdx = order.indexOf(askA ? 1 : 0);
+    const opts = [{ pair: state.pair, which: 0 }, { pair: state.pair, which: 1 }];   // which: 0 = a の絵, 1 = b の絵
+    if (Baby.level() >= 3) { const other = pick(PAIRS.filter(x => x !== state.pair)); opts.push({ pair: other, which: Math.floor(Math.random() * 2) }); }   // レベル3から 関係ない言葉も1つ
+    const order = shuffle(opts);
+    state.opts = order;
+    state.ansIdx = order.findIndex(o => o.pair === state.pair && o.which === (askA ? 1 : 0));
     choices.classList.remove('reveal');
+    choices.classList.toggle('two', order.length === 2);
     choices.innerHTML = '';
-    order.forEach((which, i) => {
+    order.forEach((o, i) => {
       const c = document.createElement('div'); c.className = 'choice'; c.dataset.i = i;
-      const name = which === 0 ? state.pair.a : state.pair.b;
-      c.innerHTML = state.pair.draw(which, p) + `<div class="lab">${name}</div>`;
+      const name = o.which === 0 ? o.pair.a : o.pair.b;
+      c.innerHTML = o.pair.draw(o.which, p) + `<div class="lab">${name}</div>`;
       // 絵があれば差し替える
       const img = new Image();
       img.onload = () => { const pic = c.querySelector('.pic'); if (pic) { pic.className = 'pic'; pic.removeAttribute('style'); pic.innerHTML = ''; pic.appendChild(img); } };
@@ -114,7 +118,8 @@
     } else {
       animate(c, 'shake', 400);
       SFX.wrong();
-      say([`それは ${state.ask}。`, `${state.ask}の はんたいは？`], { delay: 200 });
+      const o = state.opts[Number(c.dataset.i)]; const nm = o.which === 0 ? o.pair.a : o.pair.b;
+      say([`それは ${nm}。`, `${state.ask}の はんたいは？`], { delay: 200 });
     }
   });
 

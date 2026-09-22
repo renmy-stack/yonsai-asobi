@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#a5d6a7">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: #a5d6a7; }
   #scene { flex: 1; min-height: 0; position: relative; overflow: hidden; border-radius: 24px;
@@ -37,8 +37,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -53,8 +53,8 @@
   function ask() { say(`${state.target.item.name}は どこかな？`); }
   function newRound() {
     state.busy = false;
-    const n = Math.min(5, 2 + Baby.level());
-    const hideRatio = Baby.level() === 1 ? 0.5 : 0.65;      // レベル2から隠れる部分が増える
+    const n = [0, 3, 4, 5, 5, 5][Baby.level()];
+    const hideRatio = [0, 0.45, 0.55, 0.65, 0.75, 0.8][Baby.level()];      // だんだん深く隠れる
     const items = shuffle(CATALOG.animals.items).slice(0, n).map(item => ({ set: CATALOG.animals, item }));
     state.target = Baby.fresh('hide', () => pick(items), v => v.item.id);
     scene.innerHTML = '';

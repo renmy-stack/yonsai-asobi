@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#ffe0ec">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #ffe0ec 0%, #fff0f5 100%); }
   .bigchar { flex: 1; min-height: 0; color: #c2185b; }
@@ -35,8 +35,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -60,14 +60,14 @@
     const others = [];
     for (const p of shuffled.slice(1)) {
       if (p.item.name[0] !== first && !others.some(o => o.item.name[0] === p.item.name[0])) others.push(p);
-      if (others.length === 2) break;
+      if (others.length === [0, 2, 2, 3, 3, 5][Baby.level()]) break;
     }
     state.opts = shuffle([state.target, ...others]);
     kana.textContent = first;
     question.textContent = `「${first}」で はじまるのは どれ？`;
     Baby.prime([`${first}、${state.target.item.name}！`, ...state.opts.map(p => [`${p.item.name}は`, `${p.item.name[0]}で はじまるね。`]).flat(), `${first}は どれかな？`]);
+    choices.className = 'choices' + ({ 3: '', 4: ' four', 6: ' six' }[state.opts.length] || '');
     choices.innerHTML = '';
-    choices.classList.remove('reveal');
     for (const p of state.opts) {
       const c = document.createElement('div');
       c.className = 'choice'; c.dataset.id = p.item.id;

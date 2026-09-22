@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e8f5e9">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #e8f5e9 0%, #f7fff8 100%); }
   #sample { flex: 0.9; min-height: 0; display: none; align-items: center; justify-content: center; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
@@ -33,7 +33,7 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -58,10 +58,12 @@
   }
   function newRound() {
     state.busy = false;
-    state.mode = Baby.level() >= 2 && Math.random() < 0.5 ? 'same' : 'name';   // レベル2から「おなじかたち」も
+    state.mode = Math.random() < [0, 0, 0.5, 0.6, 0.8, 1][Baby.level()] ? 'same' : 'name';   // レベル2から「おなじかたち」が増えていく
     const sh = Baby.fresh('shape', () => shuffle(SHAPES), a => state.mode + a[0].id);
     state.target = sh[0];
-    state.opts = shuffle(sh.slice(0, 3));
+    const nc = [0, 3, 3, 4, 5, 5][Baby.level()];
+    state.opts = shuffle(sh.slice(0, nc));
+    choices.className = 'choices' + (nc === 4 ? ' four' : nc === 5 ? ' six' : '');
     const colors = shuffle(PALETTE);
     Baby.prime([`${state.target.name}！`, ...state.opts.map(s => `それは ${s.name}。`), `${state.target.name}は どれかな？`, 'おなじ かたちを さがしてね']);
     choices.innerHTML = '';

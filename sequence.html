@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e8eaf6">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #e8eaf6 0%, #f3f4fb 100%); }
   .choice { transition: transform .15s, background .15s; }
@@ -32,8 +32,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊 もういちど</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -68,12 +68,13 @@
     trail.textContent = '';
     [...choices.children].forEach(c => c.classList.add('dim'));
     say('よくみてね');
-    state.seq.forEach((i, k) => setTimeout(() => light(i, 550), 1200 + k * 800));
+    const sp = [0, 800, 800, 700, 600, 500][Baby.level()];   // 光る間隔がだんだん速く
+    state.seq.forEach((i, k) => setTimeout(() => light(i, sp - 250), 1200 + k * sp));
     setTimeout(() => {
       [...choices.children].forEach(c => c.classList.remove('dim'));
       state.showing = false;
       say('おなじ じゅんばんで タッチ！');
-    }, 1200 + state.seq.length * 800 + 200);
+    }, 1200 + state.seq.length * sp + 200);
   }
 
   function newRound(sameBoard = false) {

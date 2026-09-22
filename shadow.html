@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#2b2d42">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #3a3d5c 0%, #5c5f80 100%); }
   .question { color: #fff; }
@@ -43,8 +43,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -62,8 +62,9 @@
     const all = Baby.fresh('shadow', () => shuffle(allItems()), a => a[0].item.id);
     state.target = all[0];
     // 同じセットから2つ、まぎらわしい選択肢にする
-    const same = all.filter(p => p.set === state.target.set && p !== state.target).slice(0, 2);
+    const same = all.filter(p => p.set === state.target.set && p !== state.target).slice(0, [0, 1, 2, 2, 3, 3][Baby.level()]);
     state.opts = shuffle([state.target, ...same]);
+    choices.className = 'choices' + ({ 2: ' two', 4: ' four' }[state.opts.length] || '');
     box.innerHTML = '';
     box.appendChild(makeFace(state.target.set, state.target.item));
     Baby.prime([`${state.target.item.name}の かげでした！`, ...state.opts.map(p => `${p.item.name}じゃないよ。`), 'かげを よくみてね']);

@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#c8e6c9">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #bde6ff 0%, #bde6ff 30%, #a5d6a7 30%, #81c784 100%); }
   #hud { display: flex; justify-content: space-between; align-items: center; font-size: 22px; font-weight: bold; color: #2e5d32; padding: 0 56px; }
@@ -40,8 +40,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -61,7 +61,7 @@
     const free = holes.filter(h => !h.who);
     if (!free.length) return;
     const h = pick(free);
-    const bee = Math.random() < 0.2;                 // 2割はハチ（たたいたらダメ）
+    const bee = Math.random() < [0, 0.1, 0.15, 0.2, 0.25, 0.3][Baby.level()];   // ハチの割合がだんだん増える
     h.who = bee ? { bee: true } : { bee: false, item: pick(ANIMALS) };
     const who = h.el.querySelector('.who'); who.innerHTML = '';
     if (bee) who.appendChild(Baby.pic('assets/misc/bee.png', '🐝')); else who.innerHTML = `<img src="${CATALOG.animals.dir}/${h.who.item.id}.png" alt="">`;

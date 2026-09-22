@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e0f2f1">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #e0f2f1 0%, #ffffff 100%); }
 
@@ -32,8 +32,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -58,11 +58,11 @@
   function ask() { say(`${state.target[1]}は どれかな？`); }
   function newRound() {
     state.busy = false;
-    const n = Baby.level() >= 3 ? 4 : 3;
+    const n = [0, 3, 3, 4, 4, 6][Baby.level()];
     const sh = Baby.fresh('verb', () => shuffle(VERBS), a => a[0][0]);
     state.target = sh[0]; state.opts = shuffle(sh.slice(0, n));
     word.textContent = state.target[1];
-    choices.className = 'choices ' + (n === 4 ? 'four' : '');
+    choices.className = 'choices ' + ({ 4: 'four', 6: 'six' }[n] || '');
     choices.innerHTML = '';
     state.opts.forEach((v, i) => { const d = document.createElement('div'); d.className = 'choice'; d.dataset.i = i; d.appendChild(verbPic(v)); choices.appendChild(d); });
     Baby.prime([`${state.target[1]}！`, ...state.opts.map(v => `それは ${v[1]}。`)]);

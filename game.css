@@ -21,6 +21,7 @@
 .choices.two  { grid-template-columns: repeat(2, 1fr); }
 .choices.four { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
 .choices.six  { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); }
+.choices.eight { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); }
 @media (orientation: landscape) {
   .choices.six { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); }
 }

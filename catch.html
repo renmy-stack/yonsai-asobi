@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#bde6ff">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #8fd3ff 0%, #d9f3ff 70%, #b9f0a6 70%, #a5d6a7 100%); }
   #hud { display: flex; justify-content: space-between; font-size: 22px; font-weight: bold; color: #2e5d32; padding: 0 56px; }
@@ -40,8 +40,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -61,7 +61,7 @@
   field.addEventListener('pointermove', (e) => { if (e.buttons || e.pointerType === 'touch') { e.preventDefault(); moveTo(e.clientX); } });
 
   function spawn() {
-    const bad = Math.random() < 0.2;
+    const bad = Math.random() < [0, 0.1, 0.15, 0.2, 0.25, 0.3][Baby.level()];   // 虫の割合がだんだん増える
     const el = document.createElement('div'); el.className = 'drop';
     let item = null;
     if (bad) { const b = pick(BUGS); el.appendChild(Baby.pic(`assets/misc/${b[0]}.png`, b[1])); }

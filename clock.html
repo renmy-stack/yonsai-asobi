@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e3f2fd">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #e3f2fd 0%, #f5fbff 100%); }
   #clockBox { flex: 1.4; min-height: 0; display: flex; align-items: center; justify-content: center; }
@@ -41,7 +41,7 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -71,12 +71,15 @@
 
   function newRound() {
     state.busy = false;
-    state.h = Baby.fresh('clock', () => 1 + Math.floor(Math.random() * 12), String);
-    state.half = Baby.level() >= 2 && Math.random() < 0.5;     // レベル2から「はん」も出す
+    const hmax = Baby.level() === 1 ? 6 : 12;   // レベル1は 1〜6じ
+    state.h = Baby.fresh('clock', () => 1 + Math.floor(Math.random() * hmax), String);
+    state.half = Math.random() < [0, 0, 0, 0.3, 0.5, 0.6][Baby.level()];     // レベル3から「はん」も出す
     setHands(state.h, state.half);
     const set = new Set([state.h]);
-    while (set.size < 3) set.add(1 + Math.floor(Math.random() * 12));
+    const nc = Baby.level() >= 4 ? 4 : 3;
+    while (set.size < nc) set.add(Baby.level() >= 5 ? ((state.h - 1 + 12 + (Math.floor(Math.random() * 5) - 2)) % 12) + 1 : 1 + Math.floor(Math.random() * hmax));   // レベル5は近い時刻でまぎらわす
     state.opts = shuffle([...set]);
+    choices.className = 'choices' + (nc === 4 ? ' four' : '');
     Baby.prime([`${read(state.h, state.half)}！`, 'ちがうよ。', 'あかい みじかい はりを みてね']);
     choices.innerHTML = '';
     for (const h of state.opts) {

@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e0f7fa">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #e0f7fa 0%, #f1fbfc 100%); }
   #speaker { flex: 0.9; min-height: 0; display: flex; align-items: center; justify-content: center; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); font-size: min(30vmin, 150px); }
@@ -32,8 +32,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊 もういちど</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -55,8 +55,10 @@
     const sh = Baby.fresh('sound', () => shuffle(POOL), a => a[0].item.id);
     state.target = sh[0];
     // 同じセットから2つ（似た音で迷わせる）
-    const same = sh.slice(1).filter(p => p.set === state.target.set).slice(0, 2);
+    const src = Baby.level() >= 4 ? sh.slice(1) : sh.slice(1).filter(p => p.set === state.target.set);   // レベル4から 仲間以外もまぜる
+    const same = src.slice(0, [0, 1, 2, 2, 3, 3][Baby.level()]);
     state.opts = shuffle([state.target, ...same]);
+    choices.className = 'choices' + ({ 2: ' two', 4: ' four' }[state.opts.length] || '');
     choices.innerHTML = '';
     state.opts.forEach((p, i) => {
       const c = document.createElement('div'); c.className = 'choice'; c.dataset.i = i;

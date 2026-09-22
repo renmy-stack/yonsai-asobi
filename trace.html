@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff8e1">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #fff8e1 0%, #fffdf5 100%); }
   #sets { display: flex; gap: 8px; justify-content: center; }
@@ -39,7 +39,7 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="next" class="topbtn right" type="button">つぎ ▶</button>
 
-<script src="common.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -113,7 +113,7 @@
     for (let i = 0; i < S * S; i++) if (state.mask[i] && data[i * 4 + 3] > 0) n++;   // 指の通り道の近くにあるお手本の画素
     const p = n / state.maskCount;
     meter.style.width = `${Math.min(100, Math.round(p * 100))}%`;
-    if (p >= 0.65 && !state.done) {
+    if (p >= [0, 0.55, 0.6, 0.65, 0.7, 0.75][Baby.level()] && !state.done) {   // 合格ラインがだんだん上がる
       state.done = true;
       SFX.correct(); cheer('🎉'); celebrate();
       state.score++; Baby.setLevel(state.score);

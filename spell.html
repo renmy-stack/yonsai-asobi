@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff8e1">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #fff8e1 0%, #fffdf5 100%); }
   #pic { flex: 0.9; min-height: 0; display: flex; align-items: center; justify-content: center; font-size: min(28vmin, 140px); line-height: 1; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
@@ -38,8 +38,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="words.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="words.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -56,14 +56,14 @@
   function ask() { say(state.word[1]); }
   function newRound() {
     state.busy = false; state.pos = 0;
-    const maxLen = Baby.level() === 1 ? 3 : 4;
-    const pool = WORDS.filter(w => isPlain(w[1]) && w[1].length >= 2 && w[1].length <= maxLen);
+    const maxLen = [0, 2, 3, 3, 4, 5][Baby.level()], minLen = Baby.level() >= 4 ? 3 : 2;
+    const pool = WORDS.filter(w => isPlain(w[1]) && w[1].length >= minLen && w[1].length <= maxLen);
     state.word = Baby.fresh('spell', () => pick(pool), w => w[1]);
     const kana = [...state.word[1]];
     pic.innerHTML = ''; pic.appendChild(wordPic(state.word));
     slots.innerHTML = kana.map(() => '<div class="slot"></div>').join('');
     // 余分な文字を1〜2個まぜる
-    const extra = shuffle([...KANA].filter(ch => !kana.includes(ch))).slice(0, kana.length >= 3 ? 2 : 1);
+    const extra = shuffle([...KANA].filter(ch => !kana.includes(ch))).slice(0, [0, 1, 1, 2, 2, 3][Baby.level()]);   // 余分な文字がだんだん増える
     tiles.innerHTML = '';
     shuffle([...kana, ...extra]).forEach(ch => {
       const t = document.createElement('div'); t.className = 'tile'; t.textContent = ch; tiles.appendChild(t);

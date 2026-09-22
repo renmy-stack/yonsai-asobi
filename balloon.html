@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#bde6ff">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #8fd3ff 0%, #d9f3ff 100%); }
   #sky { flex: 1; min-height: 0; position: relative; overflow: hidden; border-radius: 24px; }
@@ -42,8 +42,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -61,6 +61,7 @@
   }
   function newTask() {
     state.hits = 0; state.busy = false;
+    clearInterval(state.spawner); state.spawner = setInterval(spawn, [0, 1300, 1100, 1000, 900, 800][Baby.level()]);   // 出る間隔もレベルで
     state.mode = Baby.level() >= 2 && Math.random() < 0.5 ? 'number' : 'color';
     if (state.mode === 'color') { state.target = Baby.fresh('bal-c', () => pick(COLS), c => c[0]); question.textContent = `${state.target[1]}の ふうせん`; }
     else { state.target = Baby.fresh('bal-n', () => 1 + Math.floor(Math.random() * 5), String); question.textContent = `${state.target}の ふうせん`; }
@@ -77,7 +78,7 @@
     const c = COLS.find(x => x[0] === b.dataset.color);
     b.style.setProperty('--c', c[2]);
     b.style.left = `${Math.random() * 78}%`;
-    b.style.setProperty('--dur', `${6 + Math.random() * 4}s`);
+    b.style.setProperty('--dur', `${[0, 7, 6, 5.5, 5, 4.5][Baby.level()] + Math.random() * 3}s`);   // だんだん速く
     b.innerHTML = state.mode === 'number' ? `<span>${b.dataset.num}</span>` : '';
     const im = new Image(); im.src = `assets/misc/balloon-${b.dataset.color}.png`; im.alt = ''; im.onload = () => { b.classList.add('img'); b.prepend(im); };
     sky.appendChild(b);
@@ -108,7 +109,7 @@
   });
 
   document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
-  setupStart(() => { newTask(); state.spawner = setInterval(spawn, 1100); });
+  setupStart(() => { newTask(); });
   setupHome();
 })();
 </script>

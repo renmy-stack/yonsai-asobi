@@ -8,12 +8,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e8f5e9">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #e8f5e9 0%, #f7fff8 100%); }
   #row { flex: 0.9; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 4%; padding: 8px; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
   #row .cell { width: 15%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+  #row.long { gap: 1%; } #row.long .cell { width: 9.5%; }
   #row .cell img, #row .cell svg { width: 100%; height: 100%; object-fit: contain; }
   #row .cell.q { border: 4px dashed #ff8c42; border-radius: 16px; font-size: min(10vw, 48px); font-weight: bold; color: #ff8c42; }
   .choices { flex: 1.1; }
@@ -34,8 +35,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -61,11 +62,12 @@
     // 素材: 形 か どうぶつなど。パターン: ABAB / AABB / ABC
     const useShapes = Math.random() < 0.5;
     const pool = useShapes ? shuffle(SHAPES) : shuffle(allItems()).slice(0, 4);
-    const kinds = Baby.level() === 1 ? ['ABAB'] : Baby.level() === 2 ? ['ABAB', 'AABB'] : ['ABAB', 'AABB', 'ABC'];
+    const kinds = [[], ['ABAB'], ['ABAB', 'AABB'], ['ABAB', 'AABB', 'ABC'], ['AABB', 'ABC', 'ABB'], ['ABC', 'ABB', 'ABCD']][Baby.level()];
     const kind = Baby.fresh('pattern', () => pick(kinds), String);
-    const [A, B, C] = pool;
-    const unit = kind === 'ABAB' ? [A, B] : kind === 'AABB' ? [A, A, B, B] : [A, B, C];
-    const len = kind === 'AABB' ? 7 : 6;                       // 表示する個数（最後が ?）
+    const [A, B, C, D] = pool;
+    const unit = { ABAB: [A, B], AABB: [A, A, B, B], ABC: [A, B, C], ABB: [A, B, B], ABCD: [A, B, C, D] }[kind];
+    const len = { ABAB: 6, AABB: 7, ABC: 6, ABB: 7, ABCD: 9 }[kind];                       // 表示する個数（最後が ?）
+    row.classList.toggle('long', len > 7);
     const seq = Array.from({ length: len }, (_, i) => unit[i % unit.length]);
     state.answer = seq[len - 1];
     state.seq = seq.slice(0, len - 1);

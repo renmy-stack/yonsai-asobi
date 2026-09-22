@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#ede7f6">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #ede7f6 0%, #f8f5fc 100%); }
   #table { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; gap: 3%; padding: 10px; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
@@ -36,8 +36,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -51,7 +51,8 @@
 
   function newRound() {
     state.busy = true;
-    const n = Math.min(5, 2 + Baby.level());
+    const n = [0, 3, 4, 5, 5, 5][Baby.level()];
+    const memo = [0, 3500, 3500, 3000, 2500, 2000][Baby.level()];   // 覚える時間はだんだん短く
     const set = pick(Object.values(CATALOG));
     state.items = shuffle(set.items).slice(0, n).map(item => ({ set, item }));
     state.gone = Baby.fresh('gone', () => pick(state.items), v => v.item.id);
@@ -66,11 +67,11 @@
     question.textContent = 'よく みて おぼえてね';
     say('よく みて おぼえてね');
     // 3秒後にカーテン → 1つ消す → カーテンを開ける
-    setTimeout(() => { curtain.classList.add('show'); SFX.flip(); }, 3500);
+    setTimeout(() => { curtain.classList.add('show'); SFX.flip(); }, memo);
     setTimeout(() => {
       const el = table.querySelector(`.it[data-id="${state.gone.item.id}"]`);
       el.classList.add('ghost'); el.innerHTML = '?';
-    }, 4300);
+    }, memo + 800);
     setTimeout(() => {
       curtain.classList.remove('show');
       const others = shuffle(allItems().filter(p => !state.items.some(q => q.item.id === p.item.id))).slice(0, 2);
@@ -85,7 +86,7 @@
       say('なくなったのは どれかな？');
       Baby.prime([`${state.gone.item.name}！`]);
       state.busy = false;
-    }, 5100);
+    }, memo + 1600);
   }
 
   choices.addEventListener('pointerdown', (e) => {

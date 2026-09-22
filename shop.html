@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff8e1">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #fff8e1 0%, #ffffff 100%); }
 
@@ -42,8 +42,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -65,7 +65,7 @@
   function ask() { say([`${state.item.item.name}は`, `${YEN[state.n]}`, 'コインを おいて はらおう']); }
   function newRound() {
     state.busy = false; state.paid = 0; tray.innerHTML = '';
-    const max = [0, 3, 5, 6, 8, 8][Baby.level()];
+    const max = [0, 3, 4, 5, 6, 8][Baby.level()];
     state.item = Baby.fresh('shop', () => pick(allItems().filter(p => p.set.key === 'foods')), v => v.item.id);
     state.n = 1 + Math.floor(Math.random() * max);
     face.innerHTML = ''; face.appendChild(makeFace(state.item.set, state.item.item));

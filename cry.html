@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff8e1">
-<link rel="stylesheet" href="common.css?v=202609222045">
-<link rel="stylesheet" href="game.css?v=202609222045">
+<link rel="stylesheet" href="common.css?v=202609222102">
+<link rel="stylesheet" href="game.css?v=202609222102">
 <style>
   body { background: linear-gradient(180deg, #fff8e1 0%, #ffffff 100%); }
 
@@ -34,8 +34,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
-<script src="common.js?v=202609222045"></script>
-<script src="catalog.js?v=202609222045"></script>
+<script src="common.js?v=202609222102"></script>
+<script src="catalog.js?v=202609222102"></script>
 <script>
 (() => {
   'use strict';
@@ -65,12 +65,13 @@
   }
   function newRound() {
     state.busy = false;
-    state.mode = Baby.level() >= 2 && Math.random() < 0.5 ? 'who' : 'cry';    // レベル2から「声を聞いて動物を当てる」も
+    state.mode = Math.random() < [0, 0, 0.3, 0.5, 0.7, 1][Baby.level()] ? 'who' : 'cry';    // レベル2から「声を聞いて動物を当てる」が増えていく
     const sh = Baby.fresh('cry', () => shuffle(CRIES), a => a[0][1]);
-    state.target = sh[0]; state.opts = shuffle(sh.slice(0, 3));
+    const nc = Baby.level() >= 4 ? 4 : 3;
+    state.target = sh[0]; state.opts = shuffle(sh.slice(0, nc));
     who.innerHTML = '';
     if (state.mode === 'cry') who.appendChild(pic(state.target)); else who.textContent = '👂';
-    choices.className = 'choices';
+    choices.className = 'choices' + (nc === 4 ? ' four' : '');
     choices.innerHTML = '';
     state.opts.forEach((c, i) => {
       const d = document.createElement('div'); d.className = 'choice'; d.dataset.i = i;
