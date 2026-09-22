@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff3e0">
-<link rel="stylesheet" href="common.css?v=202609222130">
-<link rel="stylesheet" href="game.css?v=202609222130">
+<link rel="stylesheet" href="common.css?v=202609222341">
+<link rel="stylesheet" href="game.css?v=202609222341">
 <style>
   body { background: linear-gradient(180deg, #fff3e0 0%, #ffffff 100%); }
 
@@ -17,10 +17,21 @@
   #boxpic { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
   #boxpic img { max-width: 100%; max-height: 100%; object-fit: contain; }
   #boxpic.emoji { border-radius: 24px; background: #8d6e63; box-shadow: inset 0 0 0 10px #a1887f; }
-  #slots { position: relative; width: 240px; height: 120px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 4%; box-sizing: border-box; }   /* 大きさは JS の fitBento() が箱の絵に合わせる */
-  .slot { border-radius: 16px; display: flex; align-items: center; justify-content: center; }
-  .slot:empty { background: rgba(255,255,255,.25); border: 3px dashed rgba(255,255,255,.7); }
-  .slot .pic, .pal .pic { width: 90%; height: 90%; display: flex; align-items: center; justify-content: center; } .slot .pic img, .pal .pic img { width: 100%; height: 100%; object-fit: contain; }
+  /* #slots は箱の絵とぴったり同じ位置・大きさ（JS の fitBento() が合わせる）。中の枠は箱の仕切りに合わせて％で置く */
+  #slots { position: absolute; width: 240px; height: 160px; }
+  #rice { position: absolute; left: 7%; top: 9%; width: 47%; height: 80%; display: flex; align-items: center; justify-content: center; }
+  #rice img { width: 100%; height: 100%; object-fit: fill; }
+  .slot { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 16px; }
+  .slot:empty { background: rgba(255,255,255,.18); border: 3px dashed rgba(255,255,255,.75); }
+  /* 右の仕切り: 2x2 の おかず。左の ごはんの上: 2つ */
+  .slot[data-i="0"] { left: 60%; top: 10%; width: 17%; height: 40%; } .slot[data-i="1"] { left: 78%; top: 10%; width: 17%; height: 40%; }
+  .slot[data-i="2"] { left: 60%; top: 51%; width: 17%; height: 40%; } .slot[data-i="3"] { left: 78%; top: 51%; width: 17%; height: 40%; }
+  .slot[data-i="4"] { left: 10%; top: 12%; width: 17%; height: 36%; } .slot[data-i="5"] { left: 34%; top: 50%; width: 17%; height: 36%; }
+  .slot .pic { width: 135%; height: 135%; filter: drop-shadow(0 3px 2px rgba(0,0,0,.18)); }   /* 枠より大きめに描いて、ぎっしり詰めた感じに */
+  #lid { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; transform: translateY(-130%); transition: transform .6s ease, opacity .3s; pointer-events: none; z-index: 5; }
+  #lid img { width: 100%; height: 100%; object-fit: fill; }
+  #lid.on { opacity: 1; transform: translateY(0); }
+  .pal .pic { width: 90%; height: 90%; } .slot .pic, .pal .pic { display: flex; align-items: center; justify-content: center; } .slot .pic img, .pal .pic img { width: 100%; height: 100%; object-fit: contain; }
   .pic.emoji { font-size: min(9vmin, 44px); }
   #palette { height: min(24vh, 150px); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(2, 1fr); gap: 6px; }
   .pal { min-width: 0; border-radius: 16px; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; min-height: 0; }
@@ -35,15 +46,15 @@
 <div id="stage">
   <div class="question" id="question">すきな おかずを いれよう</div>
   <div class="stars" id="stars"></div>
-  <div id="box"><div id="boxpic"></div><div id="slots"></div></div>
+  <div id="box"><div id="boxpic"></div><div id="slots"><div id="rice"></div><div id="lid"></div></div></div>
   <div id="palette"></div>
   <button id="done" type="button">できた！</button>
 </div>
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609222130"></script>
-<script src="catalog.js?v=202609222130"></script>
+<script src="common.js?v=202609222341"></script>
+<script src="catalog.js?v=202609222341"></script>
 <script>
 (() => {
   'use strict';
@@ -66,17 +77,21 @@
     const bw = box.clientWidth, bh = box.clientHeight; if (!bw || !bh) return;
     const im = boxpic.querySelector('img'); const ar = im && im.naturalWidth ? im.naturalWidth / im.naturalHeight : 1.5;
     let w = bw, h = w / ar; if (h > bh) { h = bh; w = h * ar; }
-    slots.style.width = `${w * 0.84}px`; slots.style.height = `${h * 0.66}px`;
+    slots.style.width = `${w}px`; slots.style.height = `${h}px`; slots.style.left = `${(bw - w) / 2}px`; slots.style.top = `${(bh - h) / 2}px`;
   }
   { const im = new Image(); im.src = 'assets/bento/box.png?v=2'; im.alt = ''; im.onload = () => { boxpic.appendChild(im); fitBento(); }; im.onerror = () => { boxpic.classList.add('emoji'); fitBento(); }; }
   new ResizeObserver(fitBento).observe(box);
-  for (let i = 0; i < 6; i++) { const s = document.createElement('div'); s.className = 'slot'; slots.appendChild(s); }
+  for (let i = 0; i < 6; i++) { const s = document.createElement('div'); s.className = 'slot'; s.dataset.i = i; slots.appendChild(s); }
+  const rice = document.getElementById('rice'), lid = document.getElementById('lid');
+  { const im = new Image(); im.src = 'assets/bento/rice.png?v=2'; im.alt = ''; im.onload = () => rice.appendChild(im); }
+  { const im = new Image(); im.src = 'assets/bento/lid.png?v=2'; im.alt = ''; im.onload = () => lid.appendChild(im); }
+  const slotList = () => [...slots.querySelectorAll('.slot')];
   ITEMS.forEach((it, i) => { const p = document.createElement('div'); p.className = 'pal'; p.dataset.i = i; p.appendChild(Baby.pic(`assets/bento/${it[0]}.png?v=2`, it[2])); palette.appendChild(p); });
-  function reset() { state.busy = false; slots.querySelectorAll('.slot').forEach(s => s.innerHTML = ''); say('すきな おかずを いれよう'); }
+  function reset() { state.busy = false; lid.classList.remove('on'); slotList().forEach(s => { s.innerHTML = ''; delete s.dataset.name; }); say('すきな おかずを いれよう'); }
   palette.addEventListener('pointerdown', (e) => {
     const p = e.target.closest('.pal'); if (!p || state.busy) return; e.preventDefault();
     const it = ITEMS[Number(p.dataset.i)];
-    const empty = [...slots.children].find(s => !s.children.length);
+    const empty = slotList().find(s => !s.children.length);
     if (!empty) { SFX.wrong(); say('もう いっぱいだよ'); return; }
     const pic = Baby.pic(`assets/bento/${it[0]}.png?v=2`, it[2]); empty.appendChild(pic); empty.dataset.name = it[1]; animate(pic, 'bounce', 400);
     SFX.pop(); burst(e.clientX, e.clientY, 4); say(it[1]);
@@ -87,9 +102,10 @@
   });
   document.getElementById('done').addEventListener('pointerdown', (e) => {
     e.preventDefault(); if (state.busy) return;
-    const names = [...slots.children].filter(s => s.dataset.name).map(s => s.dataset.name);
+    const names = slotList().filter(s => s.dataset.name).map(s => s.dataset.name);
     if (!names.length) { SFX.wrong(); say('おかずを いれてね'); return; }
     state.busy = true; SFX.fanfare(); cheer('🍱'); celebrate();
+    setTimeout(() => { lid.classList.add('on'); SFX.flip(); }, 900);   // ふたを しめる
     Baby.say(['おいしそうな おべんとう！ できた！', 'いただきます！'], { delay: 300 }).then(() => win(reset));
   });
   setupStart(() => setTimeout(reset, 300));
