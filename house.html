@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e8f5e9">
-<link rel="stylesheet" href="common.css?v=202609221752">
-<link rel="stylesheet" href="game.css?v=202609221752">
+<link rel="stylesheet" href="common.css?v=202609221754">
+<link rel="stylesheet" href="game.css?v=202609221754">
 <style>
   body { background: linear-gradient(180deg, #e8f5e9 0%, #ffffff 100%); }
 
@@ -17,13 +17,15 @@
   .part { position: absolute; display: flex; align-items: center; justify-content: center; }
   .part img { width: 100%; height: 100%; object-fit: contain; } .part.emoji { font-size: min(10vmin, 48px); }
   .part.pop { animation: pop .3s; } @keyframes pop { 0% { transform: scale(0.5); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
-  #wall { left: 30%; bottom: 14%; width: 40%; height: 34%; }
-  #roof { left: 24%; bottom: 46%; width: 52%; height: 26%; }
-  #door { left: 44%; bottom: 14%; width: 12%; height: 18%; }
-  #winL { left: 32%; bottom: 30%; width: 10%; height: 12%; } #winR { left: 58%; bottom: 30%; width: 10%; height: 12%; }
-  #chimney { left: 62%; bottom: 60%; width: 10%; height: 14%; }
-  #tree { left: 4%; bottom: 12%; width: 22%; height: 40%; } #flower { left: 76%; bottom: 12%; width: 18%; height: 18%; }
-  #sun { left: 4%; top: 4%; width: 18%; height: 18%; } #cloud { left: 70%; top: 6%; width: 22%; height: 14%; }
+  /* 正方形の「しきち」の中に％で置く（画面の縦横比が変わっても崩れない） */
+  #lot { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 300px; height: 300px; }
+  #wall { left: 30%; bottom: 14%; width: 40%; height: 32%; }
+  #roof { left: 22%; bottom: 44%; width: 56%; height: 24%; }
+  #door { left: 44.5%; bottom: 14%; width: 11%; height: 17%; }
+  #winL { left: 33%; bottom: 31%; width: 9%; height: 9%; } #winR { left: 58%; bottom: 31%; width: 9%; height: 9%; }
+  #chimney { left: 60%; bottom: 60%; width: 9%; height: 13%; }
+  #tree { left: 2%; bottom: 12%; width: 24%; height: 36%; } #flower { left: 78%; bottom: 12%; width: 16%; height: 16%; }
+  #sun { left: 2%; top: 3%; width: 18%; height: 18%; } #cloud { left: 72%; top: 6%; width: 22%; height: 12%; }
   #palette { height: min(30vh, 190px); overflow-y: auto; touch-action: pan-y; display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
   .pal { aspect-ratio: 1; border-radius: 14px; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; }
   .pal.on { background: #fff6b3; box-shadow: 0 0 0 3px #ffd84d; }
@@ -39,15 +41,15 @@
 <div id="stage">
   <div class="question" id="question">パーツを えらんで おうちを つくろう</div>
   <div class="stars" id="stars"></div>
-  <div id="scene"></div>
+  <div id="scene"><div id="lot"></div></div>
   <div id="palette"></div>
   <button id="done" type="button">できた！</button>
 </div>
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609221752"></script>
-<script src="catalog.js?v=202609221752"></script>
+<script src="common.js?v=202609221754"></script>
+<script src="catalog.js?v=202609221754"></script>
 <script>
 (() => {
   'use strict';
@@ -59,7 +61,9 @@
     ['door', 'door-brown', '🚪', 'ちゃいろの ドア'], ['door', 'door-red', '🟥', 'あかい ドア'], ['win', 'window-square', '🪟', 'しかくい まど'], ['win', 'window-round', '⚪', 'まるい まど'],
     ['chimney', 'chimney', '🧱', 'えんとつ'], ['tree', 'tree', '🌳', 'き'], ['flower', 'flower', '🌷', 'おはな'], ['sun', 'sun', '☀️', 'おひさま'], ['cloud', 'cloud', '☁️', 'くも'],
   ];
-  const scene = document.getElementById('scene'), palette = document.getElementById('palette');
+  const scene = document.getElementById('scene'), lot = document.getElementById('lot'), palette = document.getElementById('palette');
+  const fit = () => { const s = Math.floor(Math.min(scene.clientWidth, scene.clientHeight)); lot.style.width = lot.style.height = `${s}px`; };
+  new ResizeObserver(fit).observe(scene); fit();
   const stars = document.getElementById('stars');
   const state = { busy: false, chosen: {}, score: Baby.getLevel() };
 
@@ -73,7 +77,7 @@
     const ids = kind === 'win' ? ['winL', 'winR'] : [kind];
     for (const id of ids) {
       let el = document.getElementById(id);
-      if (!el) { el = document.createElement('div'); el.id = id; el.className = 'part'; scene.appendChild(el); }
+      if (!el) { el = document.createElement('div'); el.id = id; el.className = 'part'; lot.appendChild(el); }
       el.innerHTML = ''; el.classList.remove('emoji');
       const im = new Image(); im.src = `assets/house/${name}.png`; im.alt = ''; im.onerror = () => { el.textContent = emoji; el.classList.add('emoji'); };
       el.appendChild(im); animate(el, 'pop', 300);
@@ -83,7 +87,7 @@
   }
   function reset() {
     state.busy = false; state.chosen = {};
-    scene.innerHTML = ''; palette.querySelectorAll('.pal').forEach(x => x.classList.remove('on'));
+    lot.innerHTML = ''; palette.querySelectorAll('.pal').forEach(x => x.classList.remove('on'));
     place('wall', 'wall', '🟫');
     say('パーツを えらんで おうちを つくろう');
   }
