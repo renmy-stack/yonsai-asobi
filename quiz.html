@@ -72,10 +72,12 @@
     const p = state.pool.find(p => p.item.id === c.dataset.id);
     animate(c.querySelector('.face'), 'bounce', 600);
     burst(e.clientX, e.clientY, 5);
+    // タッチしたものの音（鳴き声・クラクションなど）は正解でも不正解でも鳴らす
+    if (p.item.sfx && SFX[p.item.sfx]) SFX[p.item.sfx](); else SFX.pop();
     if (p === state.target) {
       state.busy = true;
       animate(c, 'glow', 900);
-      if (p.item.sfx && SFX[p.item.sfx]) SFX[p.item.sfx](); else SFX.correct();
+      setTimeout(() => SFX.correct(), 350);
       state.score++;
       stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
       if (state.score % 5 === 0) {
@@ -84,7 +86,8 @@
         Baby.sayThen('せいかい！', { delay: 300 }, nextQuestion, 500);
       }
     } else {
-      say([`それは ${p.item.name}。`, `${state.target.item.name}は どこかな？`], { delay: 100 });
+      SFX.wrong();
+      say([`それは ${p.item.name}。`, `${state.target.item.name}は どこかな？`], { delay: 300 });
     }
   });
 
