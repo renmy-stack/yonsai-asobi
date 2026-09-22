@@ -53,6 +53,9 @@
     '1': 'いち', '2': 'に', '3': 'さん', '4': 'よん', '5': 'ご', '6': 'ろく', '7': 'なな', '8': 'はち', '9': 'きゅう', '10': 'じゅう' };
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { willReadFrequently: true });
+  // 判定用: 指が通った道を太め（幅130）に記録する見えないキャンバス。形の中心をなぞれば合格になる
+  const hit = document.createElement('canvas'); hit.width = hit.height = 640;
+  const hctx = hit.getContext('2d', { willReadFrequently: true });
   const meter = document.querySelector('#meter i');
   const stars = document.getElementById('stars');
   const S = 640;
@@ -99,17 +102,18 @@
     state.mask = new Uint8Array(S * S); state.maskCount = 0;
     for (let i = 0; i < S * S; i++) if (data[i * 4] < 128) { state.mask[i] = 1; state.maskCount++; }
     meter.style.width = '0';
+    hctx.clearRect(0, 0, S, S);
     fit();
     const ch = current();
     say(READ[ch] || ch);
   }
   function progress() {
-    const data = ctx.getImageData(0, 0, S, S).data;
-    let hit = 0;
-    for (let i = 0; i < S * S; i++) if (state.mask[i] && data[i * 4] > 200 && data[i * 4 + 2] < 120) hit++;   // オレンジで塗られた部分
-    const p = hit / state.maskCount;
+    const data = hctx.getImageData(0, 0, S, S).data;
+    let n = 0;
+    for (let i = 0; i < S * S; i++) if (state.mask[i] && data[i * 4 + 3] > 0) n++;   // 指の通り道の近くにあるお手本の画素
+    const p = n / state.maskCount;
     meter.style.width = `${Math.min(100, Math.round(p * 100))}%`;
-    if (p >= 0.7 && !state.done) {
+    if (p >= 0.65 && !state.done) {
       state.done = true;
       SFX.correct(); cheer('🎉'); celebrate();
       state.score++; Baby.setLevel(state.score);
@@ -124,13 +128,16 @@
     e.preventDefault(); if (state.done) return;
     try { cv.setPointerCapture(e.pointerId); } catch (_) {}
     state.drawing = true; state.last = pos(e);
-    ctx.strokeStyle = '#ff8c42'; ctx.lineWidth = 40; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#ff8c42'; ctx.lineWidth = 44; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(state.last.x, state.last.y); ctx.lineTo(state.last.x + 0.1, state.last.y); ctx.stroke();
+    hctx.strokeStyle = '#000'; hctx.lineWidth = 130; hctx.lineCap = 'round'; hctx.lineJoin = 'round';
+    hctx.beginPath(); hctx.moveTo(state.last.x, state.last.y); hctx.lineTo(state.last.x + 0.1, state.last.y); hctx.stroke();
   });
   cv.addEventListener('pointermove', (e) => {
     if (!state.drawing) return; e.preventDefault();
     const p = pos(e);
     ctx.beginPath(); ctx.moveTo(state.last.x, state.last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    hctx.beginPath(); hctx.moveTo(state.last.x, state.last.y); hctx.lineTo(p.x, p.y); hctx.stroke();
     state.last = p;
   });
   const stop = () => { if (state.drawing) { state.drawing = false; tone({ type: 'sine', f0: 500, dur: 0.06, gain: 0.06 }); progress(); } };
