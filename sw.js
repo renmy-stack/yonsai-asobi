@@ -2,7 +2,7 @@
    方針:
    - 画像・音声（assets/ 配下の png/mp3）: キャッシュ優先（変わらないので速く）
    - それ以外（HTML/JS/CSS/JSON）: ネット優先、失敗したらキャッシュ（更新がすぐ届く） */
-const CACHE = 'asobi-202609222038';
+const CACHE = 'asobi-202609222045';
 const CORE = ['./', './index.html', './common.css', './common.js', './catalog.js', './games.js', './game.css', './manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
