@@ -131,6 +131,22 @@ img { pointer-events: none; -webkit-user-drag: none; }
 #rewardBox .cnt { font-size: 16px; color: #789; }
 @keyframes pop-in { 0% { transform: scale(.3); } 100% { transform: scale(1); } }
 
+/* レベル表示（ゲーム画面の上・中央） */
+#levelPill {
+  position: fixed; top: calc(env(safe-area-inset-top) + 14px); left: 50%; transform: translateX(-50%);
+  height: 36px; padding: 0 12px; border-radius: 18px; background: rgba(255,255,255,.75);
+  color: #5a4300; font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 4px; z-index: 20;
+  box-shadow: 0 2px 0 rgba(0,0,0,.08); pointer-events: none;
+}
+#levelPill .m { font-size: 18px; }
+/* レベルアップ */
+#levelUpBox { position: fixed; inset: 0; z-index: 41; display: none; align-items: center; justify-content: center; background: rgba(180, 230, 255, .85); }
+#levelUpBox.show { display: flex; }
+#levelUpBox .card { background: #fff; border-radius: 28px; padding: 24px 36px; display: flex; flex-direction: column; align-items: center; gap: 6px; box-shadow: 0 8px 0 rgba(0,0,0,.12); animation: pop-in .5s cubic-bezier(.3,1.6,.5,1); }
+#levelUpBox .m { font-size: 90px; line-height: 1; }
+#levelUpBox .ttl { font-size: 28px; font-weight: bold; color: #1565c0; }
+#levelUpBox .lv { font-size: 20px; color: #789; font-weight: bold; }
+
 /* おしまい画面 */
 #timeUp {
   position: fixed; inset: 0; z-index: 50;

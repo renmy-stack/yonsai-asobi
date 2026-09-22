@@ -86,6 +86,7 @@ def phrases():
     # シール・タイマー
     P.update(['シールを もらった！', 'きょうは おしまい！ また あそぼうね', 'トロフィー', 'わんちゃん'])
     P.update(['すごい！', 'やったね！', 'そのちょうし！', 'じょうずだね！', 'きらきらシールを もらった！', 'ぜんぶ あつめた！ すごい！'])
+    P.update(['レベルアップ！'] + [f'レベル {n}に なった！' for n in range(2, 6)])
     P.update(SONGS)
     P.update(f'{n}に いろを ぬろう' for n in COLORING)
     for n in NAMES:

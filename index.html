@@ -81,6 +81,7 @@
     background: var(--edge, #cfd8dc); color: #fff; font-size: 11px; font-weight: bold;
     text-shadow: 0 1px 0 rgba(0,0,0,.15); white-space: nowrap;
   }
+  .tile .lv { position: absolute; top: 4px; right: 4px; height: 22px; padding: 0 6px; border-radius: 11px; background: rgba(255,255,255,.9); font-size: 12px; font-weight: bold; color: #5a4300; display: flex; align-items: center; gap: 2px; box-shadow: 0 2px 0 rgba(0,0,0,.1); }
   .kazu    { --edge: #ffb74d; }
   .atama   { --edge: #ff8a65; }
   .kotoba  { --edge: #ba68c8; }
@@ -151,6 +152,9 @@
       pic.appendChild(img);
       const name = document.createElement('div'); name.className = 'name'; name.textContent = g.name;
       a.append(pic, name);
+      // 遊んだことがあるゲームはレベル（メダル）を出す
+      const sc = (d.levels || {})[g.id];
+      if (sc > 0 && !Baby.NO_LEVEL.includes(g.id)) { const lvEl = document.createElement('div'); lvEl.className = 'lv'; const lv = Baby.levelOf(sc); lvEl.textContent = `${Baby.MEDALS[lv]}${lv}`; a.appendChild(lvEl); }
       a.addEventListener('pointerdown', () => { Baby.ensureAudio(); Baby.SFX.pop(); });
       menu.appendChild(a);
     });

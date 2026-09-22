@@ -69,7 +69,7 @@
   function newRound() {
     state.busy = false; state.sel = null;
     // 2回クリアするごとに 2x2 → 3x3 → 4x4
-    state.n = Math.min(3, 2 + Math.floor(state.cleared / 2));   // 4歳には 3x3 まで
+    state.n = Baby.level() === 1 ? 2 : 3;   // レベル2から 3x3（4歳には 3x3 まで）
     const n = state.n, total = n * n;
     state.pic = Baby.fresh('puzzle', () => pick(allItems()), v => v.item.id);
     const src = `${state.pic.set.dir}/${state.pic.item.id}.png`;

@@ -68,7 +68,7 @@
     else { item = pick(FOODS); el.innerHTML = `<img src="${CATALOG.foods.dir}/${item.id}.png" alt="">`; }
     el.style.left = `${8 + Math.random() * 80}%`;
     field.appendChild(el);
-    state.drops.push({ el, y: -0.12, v: (0.18 + Math.random() * 0.12 + state.round * 0.02), bad, item, x: parseFloat(el.style.left) / 100 });
+    state.drops.push({ el, y: -0.12, v: (0.16 + Math.random() * 0.12 + Baby.level() * 0.03), bad, item, x: parseFloat(el.style.left) / 100 });
   }
   let last = 0;
   function tick(t) {
@@ -93,7 +93,7 @@
     state.score = 0; state.time = 30; state.running = true; state.drops.forEach(d => d.el.remove()); state.drops = [];
     scoreEl.textContent = 0; timeEl.textContent = 30; result.classList.remove('show');
     say('おちてくる くだものを カゴで キャッチ！ むしは よけてね');
-    state.spawner = setInterval(spawn, Math.max(500, 1000 - state.round * 40));
+    state.spawner = setInterval(spawn, Math.max(500, 1100 - Baby.level() * 100));
     state.timer = setInterval(() => { state.time--; timeEl.textContent = state.time; if (state.time <= 0) endRound(); }, 1000);
     last = performance.now(); state.raf = requestAnimationFrame(tick);
   }

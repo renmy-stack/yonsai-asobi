@@ -68,7 +68,7 @@
     h.el.classList.remove('hit'); void h.el.offsetWidth;
     h.el.classList.add('up');
     tone({ type: 'sine', f0: 400, f1: 700, dur: 0.1, gain: 0.08 });
-    const stay = Math.max(700, 1400 - state.round * 60);
+    const stay = Math.max(700, 1500 - Baby.level() * 150);
     h.timeout = setTimeout(() => hide(h), stay);
   }
   function hide(h) { h.el.classList.remove('up'); clearTimeout(h.timeout); setTimeout(() => { h.who = null; }, 200); }
@@ -98,7 +98,7 @@
     scoreEl.textContent = 0; timeEl.textContent = 30;
     result.classList.remove('show');
     say('でてきた どうぶつを タッチ！ ハチは タッチしないでね');
-    const interval = Math.max(450, 900 - state.round * 40);
+    const interval = Math.max(450, 1000 - Baby.level() * 100);
     state.spawner = setInterval(popOne, interval);
     state.timer = setInterval(() => {
       state.time--; timeEl.textContent = state.time;
@@ -116,6 +116,7 @@
     const good = state.score >= 10;
     if (good) SFX.correct();
     Baby.say(good ? 'おしまい！ すごい！' : 'おしまい！ もういっかい やってみよう', { delay: 400 }).then(() => good ? Baby.reward() : null);
+    Baby.prime(['レベルアップ！']);
   }
   document.getElementById('again').addEventListener('click', startRound);
   setupStart(() => setTimeout(startRound, 500));

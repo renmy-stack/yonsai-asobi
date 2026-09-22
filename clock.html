@@ -72,7 +72,7 @@
   function newRound() {
     state.busy = false;
     state.h = Baby.fresh('clock', () => 1 + Math.floor(Math.random() * 12), String);
-    state.half = state.score >= 5 && Math.random() < 0.5;     // 5問できたら「はん」も出す
+    state.half = Baby.level() >= 2 && Math.random() < 0.5;     // レベル2から「はん」も出す
     setHands(state.h, state.half);
     const set = new Set([state.h]);
     while (set.size < 3) set.add(1 + Math.floor(Math.random() * 12));

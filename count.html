@@ -111,7 +111,7 @@
     state.busy = false;
     state.counted = 0;
     // 最初の2回は 1〜3、そのあと 1〜5
-    const max = state.round <= 2 ? 3 : 5;
+    const max = Baby.level() === 1 ? 3 : 5;
     state.n = 1 + Math.floor(Math.random() * max);
     // 直前と同じものは出さない
     const { set, item } = Baby.fresh('count', () => { const s = pick(SETS); return { set: s, item: pick(s.items) }; }, v => v.item.id);

@@ -58,7 +58,7 @@
   const svg = (s, fill) => `<svg viewBox="0 0 100 100"><path d="${s.path}" ${fill ? `fill="${s.color}"` : ''}/></svg>`;
 
   function newRound() {
-    const n = state.score < 3 ? 3 : state.score < 8 ? 4 : 6;
+    const n = [0, 3, 4, 5, 6, 6][Baby.level()];
     const shapes = shuffle(SHAPES).slice(0, n);
     board.innerHTML = ''; tray.innerHTML = '';
     state.pieces = []; state.left = n;

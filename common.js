@@ -388,9 +388,24 @@ window.Baby = (() => {
     save(d);
   }
 
-  // ゲームごとの到達レベル（次に開いたとき続きから）
+  // ゲームごとの到達度（正解数など）。次に開いたとき続きから
   function getLevel() { return (load().levels || {})[gameId] || 0; }
-  function setLevel(n) { const d = load(); (d.levels = d.levels || {})[gameId] = n; save(d); }
+  function setLevel(n) { const d = load(); (d.levels = d.levels || {})[gameId] = n; save(d); renderLevel(); }
+  // レベル: 5問正解ごとに1つ上がる（最大5）。メダルで見せる
+  const MEDALS = ['', '🥉', '🥈', '🥇', '👑', '💎'];
+  const NO_LEVEL = ['index', 'parent', 'stickers', 'draw', 'coloring', 'piano'];
+  const levelOf = (score) => Math.min(5, 1 + Math.floor((score || 0) / 5));
+  function level() { return levelOf(getLevel()); }
+  // ゲーム画面の上に「🥈 レベル 2」を出す
+  function renderLevel() {
+    if (NO_LEVEL.includes(gameId)) return;
+    let el = document.getElementById('levelPill');
+    if (!el) { el = document.createElement('div'); el.id = 'levelPill'; document.body.appendChild(el); }
+    const lv = level();
+    el.innerHTML = `<span class="m">${MEDALS[lv]}</span>レベル ${lv}`;
+    el.dataset.lv = lv;
+  }
+  document.addEventListener('DOMContentLoaded', renderLevel);
 
   // 遊んだ時間: 表示中は10秒ごとに加算（ゲームごと・日ごと）
   const today = () => new Date().toISOString().slice(0, 10);
@@ -442,7 +457,29 @@ window.Baby = (() => {
     celebrate();
     return say(rare ? 'きらきらシールを もらった！' : 'シールを もらった！', { delay: 600 })
       .then(() => complete ? say('ぜんぶ あつめた！ すごい！') : null)
-      .then(() => new Promise(res => setTimeout(() => { el.classList.remove('show'); res(); }, 700)));
+      .then(() => new Promise(res => setTimeout(() => { el.classList.remove('show'); res(); }, 700)))
+      .then(() => levelUpIfNeeded());
+  }
+  // レベルが上がっていたら「レベルアップ！」の演出（シールのあとに）
+  function levelUpIfNeeded() {
+    if (NO_LEVEL.includes(gameId)) return;
+    const d = load();
+    const lv = level();
+    const seen = (d.seenLevel = d.seenLevel || {});
+    if ((seen[gameId] || 1) >= lv) return;
+    seen[gameId] = lv; save(d);
+    let el = document.getElementById('levelUpBox');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'levelUpBox';
+      el.innerHTML = '<div class="card"><div class="m"></div><div class="ttl">レベルアップ！</div><div class="lv"></div></div>';
+      document.body.appendChild(el);
+    }
+    el.querySelector('.m').textContent = MEDALS[lv];
+    el.querySelector('.lv').textContent = `レベル ${lv}`;
+    el.classList.add('show');
+    SFX.fanfare(); celebrate();
+    return say(['レベルアップ！', `レベル ${lv}に なった！`], { delay: 500 })
+      .then(() => new Promise(res => setTimeout(() => { el.classList.remove('show'); res(); }, 600)));
   }
   function stickerCount() { return load().stickers.length; }
 
@@ -467,5 +504,5 @@ window.Baby = (() => {
   setTimeout(checkTimer, 1000);
   if (gameId !== 'index' && gameId !== 'parent' && gameId !== 'stickers') track('play');
 
-  return { pic, fresh, load, save, track, reward, stickerCount, gameId, getLevel, setLevel, praise, prime, STICKERS, RARE, ensureAudio, tone, noise, SFX, say, sayThen, hush, preloadVoice, burst, celebrate, cheer, animate, holdButton, setupStart, setupHome, shuffle, pick };
+  return { pic, level, levelOf, MEDALS, NO_LEVEL, fresh, load, save, track, reward, stickerCount, gameId, getLevel, setLevel, praise, prime, STICKERS, RARE, ensureAudio, tone, noise, SFX, say, sayThen, hush, preloadVoice, burst, celebrate, cheer, animate, holdButton, setupStart, setupHome, shuffle, pick };
 })();

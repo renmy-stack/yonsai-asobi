@@ -102,7 +102,7 @@
   }
 
   function newRound() {
-    state.n = state.score < 2 ? 5 : state.score < 5 ? 7 : 9;
+    state.n = [0, 5, 6, 7, 8, 9][Baby.level()];
     state.walls = generate(state.n);
     state.pos = [0, 0]; state.trail = [[0, 0]]; state.done = false;
     state.hero = Baby.fresh('maze-hero', () => pick(CATALOG.animals.items.map(item => ({ set: CATALOG.animals, item }))), v => v.item.id);

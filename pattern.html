@@ -61,7 +61,7 @@
     // 素材: 形 か どうぶつなど。パターン: ABAB / AABB / ABC
     const useShapes = Math.random() < 0.5;
     const pool = useShapes ? shuffle(SHAPES) : shuffle(allItems()).slice(0, 4);
-    const kinds = state.score < 3 ? ['ABAB'] : state.score < 8 ? ['ABAB', 'AABB'] : ['ABAB', 'AABB', 'ABC'];
+    const kinds = Baby.level() === 1 ? ['ABAB'] : Baby.level() === 2 ? ['ABAB', 'AABB'] : ['ABAB', 'AABB', 'ABC'];
     const kind = Baby.fresh('pattern', () => pick(kinds), String);
     const [A, B, C] = pool;
     const unit = kind === 'ABAB' ? [A, B] : kind === 'AABB' ? [A, A, B, B] : [A, B, C];

@@ -84,7 +84,7 @@
   }
   function newRound() {
     state.busy = false; state.counted = 0;
-    const max = state.score < 5 ? 3 : 4;          // 慣れたら 4+2 なども
+    const max = Baby.level() === 1 ? 3 : 4;          // レベル2から 4+2 なども
     do { state.a = 1 + Math.floor(Math.random() * max); state.b = 1 + Math.floor(Math.random() * max); } while (state.a + state.b > 6);
     const p = Baby.fresh('add', () => pick(allItems()), v => v.item.id);
     state.set = p.set; state.item = p.item;

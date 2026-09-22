@@ -56,7 +56,7 @@
   function ask() { say(state.word[1]); }
   function newRound() {
     state.busy = false; state.pos = 0;
-    const maxLen = state.score < 5 ? 3 : 4;
+    const maxLen = Baby.level() === 1 ? 3 : 4;
     const pool = WORDS.filter(w => isPlain(w[1]) && w[1].length >= 2 && w[1].length <= maxLen);
     state.word = Baby.fresh('spell', () => pick(pool), w => w[1]);
     const kana = [...state.word[1]];

@@ -61,7 +61,7 @@
   }
   function newTask() {
     state.hits = 0; state.busy = false;
-    state.mode = state.score >= 3 && Math.random() < 0.5 ? 'number' : 'color';
+    state.mode = Baby.level() >= 2 && Math.random() < 0.5 ? 'number' : 'color';
     if (state.mode === 'color') { state.target = Baby.fresh('bal-c', () => pick(COLS), c => c[0]); question.textContent = `${state.target[1]}の ふうせん`; }
     else { state.target = Baby.fresh('bal-n', () => 1 + Math.floor(Math.random() * 5), String); question.textContent = `${state.target}の ふうせん`; }
     ask();

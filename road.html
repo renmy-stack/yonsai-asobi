@@ -152,7 +152,7 @@
   }
   function newRound() {
     state.solved = false;
-    state.n = state.score < 3 ? 3 : state.score < 8 ? 4 : 5;
+    state.n = Math.min(5, 2 + Baby.level());
     generate(); render();
     say('みちを タッチして まわして、 くるまを おうちまで つなげよう');
   }

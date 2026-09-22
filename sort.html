@@ -62,7 +62,7 @@
   function newRound() {
     state.busy = false; state.next = 0;
     state.kind = Baby.fresh('sort-kind', () => pick(KINDS), k => k.key);
-    const n = state.score < 5 ? 3 : 4;
+    const n = Baby.level() === 1 ? 3 : 4;
     const p = Baby.fresh('sort-item', () => pick(allItems()), v => v.item.id);
     const bySize = state.kind.key.startsWith('size');
     // 値（大きさ % か 個数）を用意し、ランダムに並べる

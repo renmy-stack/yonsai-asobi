@@ -42,7 +42,7 @@
   const stars = document.getElementById('stars');
   const trail = document.getElementById('trail');
   const NOTES = [523, 659, 784, 1047];
-  const state = { items: [], seq: [], input: 0, showing: false, len: Math.min(6, 2 + Math.floor(Baby.getLevel() / 3)), score: Baby.getLevel() };
+  const state = { items: [], seq: [], input: 0, showing: false, len: Math.min(6, 1 + Baby.level()), score: Baby.getLevel() };
 
   function buildBoard() {
     const set = pick(Object.values(CATALOG));
@@ -98,10 +98,10 @@
         state.score++; Baby.setLevel(state.score);
         stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
         SFX.correct();
-        if (state.score % 3 === 0) state.len = Math.min(6, state.len + 1);   // 3回できたら1つ長く
+        state.len = Math.min(6, 1 + Baby.level());   // レベルごとに1つ長く
         Baby.sayThen(Baby.praise(), { delay: 200 }, () => {
           if (state.score % 5 === 0) Baby.reward().then(() => newRound(false));
-          else newRound(state.score % 3 !== 0);
+          else newRound(state.score % 5 !== 0);
         }, 600);
       }
     } else {

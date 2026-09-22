@@ -51,7 +51,7 @@
 
   function newRound() {
     state.busy = true;
-    const n = state.score < 3 ? 3 : state.score < 8 ? 4 : 5;
+    const n = Math.min(5, 2 + Baby.level());
     const set = pick(Object.values(CATALOG));
     state.items = shuffle(set.items).slice(0, n).map(item => ({ set, item }));
     state.gone = Baby.fresh('gone', () => pick(state.items), v => v.item.id);

@@ -69,7 +69,7 @@
   const SETS = [CATALOG.animals, CATALOG.vehicles, CATALOG.foods];
   const stage = document.getElementById('stage');
   // 最初の2回は 4組（8枚）、そのあと 6組（12枚）
-  const pairsFor = (round) => (round < 2 ? 4 : 6);
+  const pairsFor = (round) => (Baby.level() === 1 ? 4 : 6);
 
   const state = { round: Baby.getLevel(), open: [], lock: false, left: 0 };
 

@@ -58,7 +58,7 @@
   }
   function newRound() {
     state.busy = false;
-    state.mode = state.score >= 3 && Math.random() < 0.5 ? 'same' : 'name';   // 慣れてきたら「おなじかたち」も
+    state.mode = Baby.level() >= 2 && Math.random() < 0.5 ? 'same' : 'name';   // レベル2から「おなじかたち」も
     const sh = Baby.fresh('shape', () => shuffle(SHAPES), a => state.mode + a[0].id);
     state.target = sh[0];
     state.opts = shuffle(sh.slice(0, 3));

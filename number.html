@@ -47,7 +47,7 @@
   function ask() { say(`${READ[state.n]}は どれかな？`); }
   function newRound() {
     state.busy = false;
-    const max = state.score < 5 ? 5 : 10;                 // 慣れたら 10 まで
+    const max = Baby.level() === 1 ? 5 : 10;                 // レベル2から 10 まで
     state.n = Baby.fresh('number', () => 1 + Math.floor(Math.random() * max), String);
     const set = new Set([state.n]);
     while (set.size < 3) set.add(1 + Math.floor(Math.random() * max));

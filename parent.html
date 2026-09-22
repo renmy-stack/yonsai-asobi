@@ -50,7 +50,8 @@
   <section>
     <h2 style="margin-top:0">あそんだ きろく</h2>
     <p id="todayNote" style="margin:0 0 8px;font-weight:bold;color:#37474f"></p>
-    <table id="logTable"><thead><tr><th>ゲーム</th><th>回数</th><th>時間</th><th>正解率</th><th>最後</th></tr></thead><tbody></tbody></table>
+    <p class="note">レベルは5問正解ごとに1つ上がります（最大5）。難しすぎるときは「さげる」で1つ戻せます。</p>
+    <table id="logTable"><thead><tr><th>ゲーム</th><th>レベル</th><th>回数</th><th>時間</th><th>正解率</th><th>最後</th></tr></thead><tbody></tbody></table>
     <p class="note" id="stickerNote"></p>
   </section>
 
@@ -125,7 +126,7 @@
   // ---- 記録 ----
   const d = load();
   const tbody = document.querySelector('#logTable tbody');
-  const rows = GAMES.filter(g => d.log[g.id]).sort((a, b) => (d.log[b.id].last || 0) - (d.log[a.id].last || 0));
+  const rows = GAMES.filter(g => d.log[g.id] || (d.levels || {})[g.id]).sort((a, b) => (d.log[b.id].last || 0) - (d.log[a.id].last || 0));
   if (!rows.length) tbody.innerHTML = '<tr><td colspan="5" class="note">まだ記録がありません</td></tr>';
   for (const g of rows) {
     const l = d.log[g.id];
@@ -135,11 +136,22 @@
     const mins = Math.round((l.sec || 0) / 60);
     const last = l.last ? new Date(l.last) : null;
     const lastStr = last ? `${last.getMonth() + 1}/${last.getDate()}` : '-';
-    tr.innerHTML = `<td>${g.name}</td><td class="num">${l.play || 0}</td><td class="num">${mins}分</td>
+    const sc = (d.levels || {})[g.id] || 0;
+    const hasLv = !Baby.NO_LEVEL.includes(g.id);
+    const lvCell = hasLv ? `${Baby.MEDALS[Baby.levelOf(sc)]}${Baby.levelOf(sc)} <button class="btn" data-down="${g.id}" style="height:28px;padding:0 8px;font-size:12px">さげる</button>` : '-';
+    tr.innerHTML = `<td>${g.name}</td><td>${lvCell}</td><td class="num">${l.play || 0}</td><td class="num">${mins}分</td>
       <td>${rate == null ? '-' : `<div class="bar"><i style="width:${rate}%"></i></div><span class="note">${rate}%（${c}/${c + w}）</span>`}</td><td class="note">${lastStr}</td>`;
     tbody.appendChild(tr);
   }
   document.getElementById('stickerNote').textContent = `シール: ${d.stickers.length} 枚（${new Set(d.stickers.map(s => s.id)).size} / ${Baby.STICKERS.length} 種類）`;
+  // レベルを1つ下げる（正解数を5減らす）
+  tbody.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-down]'); if (!b) return;
+    const dd = load(); dd.levels = dd.levels || {}; dd.seenLevel = dd.seenLevel || {};
+    dd.levels[b.dataset.down] = Math.max(0, (dd.levels[b.dataset.down] || 0) - 5);
+    dd.seenLevel[b.dataset.down] = Baby.levelOf(dd.levels[b.dataset.down]);
+    save(dd); SFX.pop(); location.reload();
+  });
   const todayKey = new Date().toISOString().slice(0, 10);
   const todaySec = (d.days || {})[todayKey] || 0;
   const totalSec = Object.values(d.days || {}).reduce((a, b) => a + b, 0);

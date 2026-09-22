@@ -53,8 +53,8 @@
   function ask() { say(`${state.target.item.name}は どこかな？`); }
   function newRound() {
     state.busy = false;
-    const n = state.score < 3 ? 3 : state.score < 8 ? 4 : 5;
-    const hideRatio = state.score < 5 ? 0.5 : 0.65;      // 慣れたら隠れる部分が増える
+    const n = Math.min(5, 2 + Baby.level());
+    const hideRatio = Baby.level() === 1 ? 0.5 : 0.65;      // レベル2から隠れる部分が増える
     const items = shuffle(CATALOG.animals.items).slice(0, n).map(item => ({ set: CATALOG.animals, item }));
     state.target = Baby.fresh('hide', () => pick(items), v => v.item.id);
     scene.innerHTML = '';
