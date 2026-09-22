@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>しりとり</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e8f5e9">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e8f5e9 0%, #f7fff8 100%); }
+  #chain { display: flex; gap: 6px; justify-content: center; align-items: center; min-height: 40px; font-size: 26px; overflow: hidden; }
+  #now { flex: 0.9; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  #now .e { font-size: min(26vmin, 130px); line-height: 1; }
+  #now .w { font-size: min(8vw, 34px); font-weight: bold; color: #2e7d32; }
+  #now .w b { color: #e65100; font-size: 1.3em; }
+  .choices { flex: 1; }
+  .choice { flex-direction: column; font-size: min(16vmin, 80px); line-height: 1; }
+  .choice .lab { font-size: 16px; color: #789; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🔗</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">しりとり</div>
+  <div id="chain"></div>
+  <div id="now"></div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js"></script>
+<script src="words.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const chain = document.getElementById('chain');
+  const now = document.getElementById('now');
+  const choices = document.getElementById('choices');
+  const state = { word: null, k: '', opts: [], used: new Set(), busy: false, score: Baby.getLevel(), streak: 0 };
+  const endsN = (w) => w[1].endsWith('ん');
+
+  function showNow() {
+    const w = state.word[1];
+    now.innerHTML = `<div class="e">${state.word[0]}</div><div class="w">${w.slice(0, -1)}<b>${w.slice(-1)}</b></div>`;
+  }
+  function ask() { say([state.word[1], `つぎは 「${state.k}」`]); }
+  function startChain() {
+    state.used.clear(); state.streak = 0; chain.innerHTML = '';
+    const starts = WORDS.filter(w => !endsN(w) && WORDS.some(v => v !== w && firstKana(v[1]) === lastKana(w[1])));
+    state.word = pick(starts);
+    state.used.add(state.word[1]);
+    nextTurn();
+  }
+  function nextTurn() {
+    state.busy = false;
+    state.k = lastKana(state.word[1]);
+    showNow();
+    const good = shuffle(WORDS.filter(w => !state.used.has(w[1]) && firstKana(w[1]) === state.k && !endsN(w)));
+    const bad = shuffle(WORDS.filter(w => !state.used.has(w[1]) && firstKana(w[1]) !== state.k));
+    if (!good.length) { say('つづきが ないね。 あたらしく はじめよう'); setTimeout(startChain, 2500); return; }
+    state.opts = shuffle([good[0], ...bad.slice(0, 2)]);
+    choices.innerHTML = '';
+    state.opts.forEach((w, i) => {
+      const c = document.createElement('div'); c.className = 'choice'; c.dataset.i = i;
+      c.innerHTML = `<span>${w[0]}</span><span class="lab">${w[1]}</span>`;
+      choices.appendChild(c);
+    });
+    Baby.prime([...state.opts.map(w => w[1]), `${state.k}で はじまるね。`, `${state.k}で はじまるのは どれかな？`]);
+    ask();
+  }
+
+  choices.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.choice');
+    if (!c || state.busy) return;
+    e.preventDefault();
+    const w = state.opts[Number(c.dataset.i)];
+    burst(e.clientX, e.clientY, 5);
+    if (firstKana(w[1]) === state.k) {
+      state.busy = true;
+      animate(c, 'glow', 900);
+      SFX.correct();
+      state.used.add(w[1]);
+      chain.appendChild(Object.assign(document.createElement('span'), { textContent: state.word[0] }));
+      chain.appendChild(Object.assign(document.createElement('span'), { textContent: '→', style: 'font-size:16px;color:#999' }));
+      state.word = w; state.streak++;
+      state.score++; Baby.setLevel(state.score);
+      sayThen([Baby.praise(), w[1]], { delay: 300 }, () => {
+        if (state.score % 5 === 0) Baby.reward().then(nextTurn); else nextTurn();
+      }, 500);
+    } else {
+      animate(c, 'shake', 400);
+      SFX.wrong();
+      say([w[1], `${firstKana(w[1])}で はじまるね。`, `${state.k}で はじまるのは どれかな？`], { delay: 200 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(startChain, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

@@ -162,7 +162,7 @@
     for (const g of GAMES) { urls.add(`assets/icons/${g.id}.png`); urls.add(`${g.id}.html`); }
     ['mascot', 'trophy'].forEach(n => urls.add(`assets/icons/${n}.png`));
     ['dog', 'car', 'apple', 'fish', 'house', 'flower', 'train', 'cat', 'butterfly', 'icecream', 'rocket', 'rabbit'].forEach(n => urls.add(`assets/coloring/${n}.png`));
-    ['index.html', 'stickers.html', 'parent.html', 'common.js', 'common.css', 'game.css', 'catalog.js', 'games.js', 'assets/voice/manifest.json'].forEach(u => urls.add(u));
+    ['index.html', 'stickers.html', 'parent.html', 'common.js', 'common.css', 'game.css', 'catalog.js', 'games.js', 'words.js', 'assets/scenes/forest.png', 'assets/scenes/town.png', 'assets/voice/manifest.json'].forEach(u => urls.add(u));
     try { const m = await fetch('assets/voice/manifest.json').then(r => r.json()); Object.values(m).forEach(f => urls.add('assets/voice/' + f)); } catch (_) {}
     const list = [...urls]; let done = 0, fail = 0;
     st.textContent = `0 / ${list.length}`;

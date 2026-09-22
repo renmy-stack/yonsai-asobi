@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ことばづくり</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fff8e1">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #fff8e1 0%, #fffdf5 100%); }
+  #pic { flex: 0.9; min-height: 0; display: flex; align-items: center; justify-content: center; font-size: min(28vmin, 140px); line-height: 1; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  #slots { display: flex; justify-content: center; gap: 8px; }
+  .slot { width: min(16vw, 72px); height: min(16vw, 72px); border-radius: 14px; border: 4px dashed #ffb74d; background: #fff; display: flex; align-items: center; justify-content: center; font-size: min(9vw, 40px); font-weight: bold; color: #345; }
+  .slot.filled { border-style: solid; background: #fff6b3; }
+  #tiles { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+  .tile { width: min(18vw, 80px); height: min(18vw, 80px); border-radius: 16px; background: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.12); display: flex; align-items: center; justify-content: center; font-size: min(10vw, 44px); font-weight: bold; color: #345; }
+  .tile.used { visibility: hidden; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🧩</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">もじを じゅんばんに タッチ</div>
+  <div class="stars" id="stars"></div>
+  <div id="pic"></div>
+  <div id="slots"></div>
+  <div id="tiles"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js"></script>
+<script src="words.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const KANA = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわん';
+  // ひらがなだけ・2〜3文字（慣れたら4文字）の言葉
+  const isPlain = (k) => [...k].every(ch => KANA.includes(ch) || 'がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ'.includes(ch));
+  const pic = document.getElementById('pic');
+  const slots = document.getElementById('slots');
+  const tiles = document.getElementById('tiles');
+  const stars = document.getElementById('stars');
+  const state = { word: null, pos: 0, busy: false, score: Baby.getLevel() };
+
+  function ask() { say(state.word[1]); }
+  function newRound() {
+    state.busy = false; state.pos = 0;
+    const maxLen = state.score < 5 ? 3 : 4;
+    const pool = WORDS.filter(w => isPlain(w[1]) && w[1].length >= 2 && w[1].length <= maxLen);
+    state.word = Baby.fresh('spell', () => pick(pool), w => w[1]);
+    const kana = [...state.word[1]];
+    pic.textContent = state.word[0];
+    slots.innerHTML = kana.map(() => '<div class="slot"></div>').join('');
+    // 余分な文字を1〜2個まぜる
+    const extra = shuffle([...KANA].filter(ch => !kana.includes(ch))).slice(0, kana.length >= 3 ? 2 : 1);
+    tiles.innerHTML = '';
+    shuffle([...kana, ...extra]).forEach(ch => {
+      const t = document.createElement('div'); t.className = 'tile'; t.textContent = ch; tiles.appendChild(t);
+    });
+    Baby.prime([...kana, state.word[1]]);
+    ask();
+  }
+
+  tiles.addEventListener('pointerdown', (e) => {
+    const t = e.target.closest('.tile');
+    if (!t || state.busy || t.classList.contains('used')) return;
+    e.preventDefault();
+    const kana = [...state.word[1]];
+    burst(e.clientX, e.clientY, 4);
+    if (t.textContent === kana[state.pos]) {
+      t.classList.add('used');
+      const s = slots.children[state.pos]; s.textContent = t.textContent; s.classList.add('filled');
+      SFX.count(state.pos + 1);
+      say(t.textContent, { delay: 50 });
+      state.pos++;
+      if (state.pos === kana.length) {
+        state.busy = true;
+        SFX.correct();
+        state.score++; Baby.setLevel(state.score);
+        stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+        sayThen([Baby.praise(), state.word[1]], { delay: 600 }, () => {
+          if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
+        }, 700);
+      }
+    } else {
+      animate(t, 'shake', 400);
+      SFX.wrong();
+      say([`つぎは 「${kana[state.pos]}」`], { delay: 150 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

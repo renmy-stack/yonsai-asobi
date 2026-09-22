@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>みちつなぎ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#c8e6c9">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #c8e6c9 0%, #e8f5e9 100%); }
+  #wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  #grid { position: relative; width: min(92vw, 70vh, 520px); aspect-ratio: 1; display: grid; gap: 4px; padding: 4px; border-radius: 20px; background: #7cb342; }
+  .tile { position: relative; background: #aed581; border-radius: 8px; overflow: hidden; touch-action: none; }
+  .tile svg { width: 100%; height: 100%; display: block; transition: transform .2s; }
+  .tile svg path { stroke: #616161; stroke-width: 34; fill: none; stroke-linecap: butt; }
+  .tile svg path.mid { stroke: #fff59d; stroke-width: 5; stroke-dasharray: 10 10; }
+  .tile.lit { background: #dcedc8; }
+  #car { position: absolute; width: 14%; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; z-index: 3; }
+  #car img { width: 100%; height: 100%; object-fit: contain; }
+  .mark { position: absolute; font-size: min(7vw, 30px); z-index: 2; pointer-events: none; transform: translate(-50%, -50%); }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🛣️</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">みちを タッチして まわそう</div>
+  <div class="stars" id="stars"></div>
+  <div id="wrap"><div id="grid"></div></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="next" class="topbtn right" type="button">つぎ ▶</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, celebrate, cheer, setupStart, setupHome, shuffle, pick, tone } = Baby;
+  const grid = document.getElementById('grid');
+  const stars = document.getElementById('stars');
+  // 方向: 0=上 1=右 2=下 3=左。タイル種: straight(上下) / curve(上と右)。rot で回す
+  const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+  const state = { n: 3, tiles: [], start: null, goal: null, solved: false, score: Baby.getLevel() };
+  const opens = (t) => t.type === 'straight' ? [t.rot % 2, (t.rot + 2) % 4] : [t.rot % 4, (t.rot + 1) % 4];
+
+  function generate() {
+    const n = state.n;
+    // スタート(左端のどこか)からゴール(右端のどこか)へ、右か上下にだけ進むランダムな道
+    const path = []; let x = 0, y = Math.floor(Math.random() * n);
+    state.start = [x, y]; path.push([x, y]);
+    while (x < n - 1) {
+      const moves = [[1, 0]]; if (y > 0) moves.push([0, -1]); if (y < n - 1) moves.push([0, 1]);
+      const [dx, dy] = Math.random() < 0.55 ? [1, 0] : pick(moves);
+      const nx = x + dx, ny = y + dy;
+      if (path.some(([px, py]) => px === nx && py === ny)) continue;
+      x = nx; y = ny; path.push([x, y]);
+    }
+    state.goal = [x, y];
+    // 各マスの種類と正解の向きを決める
+    const cells = Array.from({ length: n }, () => Array.from({ length: n }, () => null));
+    const dirOf = (a, b) => DIRS.findIndex(([dx, dy]) => a[0] + dx === b[0] && a[1] + dy === b[1]);
+    path.forEach((c, i) => {
+      const din = i === 0 ? 3 : (dirOf(c, path[i - 1]));           // 来た方向（スタートは左から）
+      const dout = i === path.length - 1 ? 1 : dirOf(c, path[i + 1]); // 行く方向（ゴールは右へ）
+      const set = [din, dout].sort();
+      let type, rot;
+      if ((din + 2) % 4 === dout) { type = 'straight'; rot = din % 2; }
+      else { type = 'curve'; rot = [0, 1, 2, 3].find(r => { const o = [r % 4, (r + 1) % 4]; return o.includes(din) && o.includes(dout); }); }
+      cells[c[1]][c[0]] = { type, rot, onPath: true };
+    });
+    for (let yy = 0; yy < n; yy++) for (let xx = 0; xx < n; xx++) if (!cells[yy][xx]) cells[yy][xx] = { type: Math.random() < 0.5 ? 'straight' : 'curve', rot: Math.floor(Math.random() * 4), onPath: false };
+    // 正解からずらす（道のマスは必ず1つ以上回す）
+    for (const row of cells) for (const c of row) { c.answer = c.rot; c.rot = (c.rot + 1 + Math.floor(Math.random() * 3)) % 4; }
+    state.tiles = cells;
+  }
+  function tileSvg(t) {
+    const p = t.type === 'straight' ? 'M50 -5 V105' : 'M50 -5 V50 H105';
+    return `<svg viewBox="0 0 100 100" style="transform:rotate(${t.rot * 90}deg)"><path d="${p}"/><path class="mid" d="${p}"/></svg>`;
+  }
+  function render() {
+    const n = state.n;
+    grid.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+    grid.innerHTML = '';
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const d = document.createElement('div'); d.className = 'tile'; d.dataset.x = x; d.dataset.y = y;
+      d.innerHTML = tileSvg(state.tiles[y][x]); grid.appendChild(d);
+    }
+    const mark = (pos, txt, cls) => { const m = document.createElement('div'); m.className = 'mark'; m.textContent = txt; m.style.left = `${(pos[0] + 0.5) / n * 100}%`; m.style.top = `${(pos[1] + 0.5) / n * 100}%`; grid.appendChild(m); };
+    mark([state.start[0] - 0.55, state.start[1]], '🚗');
+    mark([state.goal[0] + 0.55, state.goal[1]], '🏠');
+  }
+  // つながっているか（スタートから右方向へ入って辿る）
+  function trace() {
+    const n = state.n; let [x, y] = state.start; let from = 3; const route = [];
+    for (let step = 0; step < n * n + 2; step++) {
+      if (x < 0 || y < 0 || x >= n || y >= n) return null;
+      const t = state.tiles[y][x]; const o = opens(t);
+      if (!o.includes(from)) return null;
+      route.push([x, y]);
+      const out = o.find(d => d !== from);
+      if (x === state.goal[0] && y === state.goal[1] && out === 1) return route;
+      x += DIRS[out][0]; y += DIRS[out][1]; from = (out + 2) % 4;
+    }
+    return null;
+  }
+  grid.addEventListener('pointerdown', (e) => {
+    const d = e.target.closest('.tile'); if (!d || state.solved) return;
+    e.preventDefault();
+    const t = state.tiles[d.dataset.y][d.dataset.x];
+    t.rot = (t.rot + 1) % 4;
+    d.querySelector('svg').style.transform = `rotate(${t.rot * 90}deg)`;
+    tone({ type: 'triangle', f0: 400, f1: 600, dur: 0.08, gain: 0.12 });
+    burst(e.clientX, e.clientY, 3);
+    const route = trace();
+    if (route) {
+      state.solved = true;
+      route.forEach(([x, y]) => grid.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`).classList.add('lit'));
+      driveCar(route);
+    }
+  });
+  function driveCar(route) {
+    const n = state.n;
+    const car = document.createElement('div'); car.id = 'car'; car.innerHTML = `<img src="${CATALOG.vehicles.dir}/car.png" alt="">`;
+    grid.appendChild(car);
+    SFX.car();
+    let i = 0;
+    const step = () => {
+      if (i >= route.length) { finish(); return; }
+      const [x, y] = route[i++];
+      car.style.transition = 'left .35s linear, top .35s linear';
+      car.style.left = `${(x + 0.5) / n * 100}%`; car.style.top = `${(y + 0.5) / n * 100}%`;
+      setTimeout(step, 360);
+    };
+    car.style.left = `${(state.start[0] - 0.5) / n * 100}%`; car.style.top = `${(state.start[1] + 0.5) / n * 100}%`;
+    setTimeout(step, 100);
+  }
+  function finish() {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    SFX.fanfare(); cheer('🎉'); celebrate();
+    Baby.say('つながった！ おうちに ついた！', { delay: 300 }).then(() => state.score % 5 === 0 ? Baby.reward() : null).then(() => setTimeout(newRound, 500));
+  }
+  function newRound() {
+    state.solved = false;
+    state.n = state.score < 3 ? 3 : state.score < 8 ? 4 : 5;
+    generate(); render();
+    say('みちを タッチして まわして、 くるまを おうちまで つなげよう');
+  }
+  document.getElementById('next').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.solved) newRound(); });
+  setupStart(() => setTimeout(newRound, 300));
+  setupHome();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>おとあて</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e0f7fa">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e0f7fa 0%, #f1fbfc 100%); }
+  #speaker { flex: 0.9; min-height: 0; display: flex; align-items: center; justify-content: center; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); font-size: min(30vmin, 150px); }
+  #speaker.playing span { animation: pulse .5s ease-in-out infinite; display: inline-block; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+  .choices { flex: 1.1; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🔊</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">なんの おと？</div>
+  <div class="stars" id="stars"></div>
+  <div id="speaker"><span>🔊</span></div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊 もういちど</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const POOL = allItems().filter(p => p.item.sfx && p.item.sfx !== 'pop' && p.item.sfx !== 'munch');   // 音があるものだけ
+  const speaker = document.getElementById('speaker');
+  const choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const state = { target: null, opts: [], busy: false, score: Baby.getLevel() };
+
+  function playSound() {
+    speaker.classList.add('playing');
+    SFX[state.target.item.sfx]();
+    setTimeout(() => speaker.classList.remove('playing'), 1200);
+  }
+  function ask() { say('なんの おと かな？').then(() => setTimeout(playSound, 200)); }
+  function newRound() {
+    state.busy = false;
+    const sh = Baby.fresh('sound', () => shuffle(POOL), a => a[0].item.id);
+    state.target = sh[0];
+    // 同じセットから2つ（似た音で迷わせる）
+    const same = sh.slice(1).filter(p => p.set === state.target.set).slice(0, 2);
+    state.opts = shuffle([state.target, ...same]);
+    choices.innerHTML = '';
+    state.opts.forEach((p, i) => {
+      const c = document.createElement('div'); c.className = 'choice'; c.dataset.i = i;
+      c.appendChild(makeFace(p.set, p.item)); choices.appendChild(c);
+    });
+    Baby.prime([`${state.target.item.name}！`, ...state.opts.map(p => `${p.item.name}じゃないよ。`)]);
+    ask();
+  }
+  speaker.addEventListener('pointerdown', (e) => { e.preventDefault(); if (state.target) playSound(); });
+
+  choices.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.choice');
+    if (!c || state.busy) return;
+    e.preventDefault();
+    const p = state.opts[Number(c.dataset.i)];
+    burst(e.clientX, e.clientY, 5);
+    if (p === state.target) {
+      state.busy = true;
+      animate(c, 'glow', 900);
+      SFX[p.item.sfx]();
+      state.score++; Baby.setLevel(state.score);
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      setTimeout(() => SFX.correct(), 600);
+      sayThen([Baby.praise(), `${p.item.name}！`], { delay: 900 }, () => {
+        if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
+      }, 600);
+    } else {
+      animate(c, 'shake', 400);
+      SFX.wrong();
+      say([`${p.item.name}じゃないよ。`, 'もういちど きいてみよう'], { delay: 200 }).then(() => setTimeout(playSound, 200));
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy && state.target) playSound(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>はんたいことば</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f3e5f5">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #f3e5f5 0%, #fbf5fc 100%); }
+  #word { flex: 0.6; min-height: 0; display: flex; align-items: center; justify-content: center; font-size: min(11vw, 52px); font-weight: bold; color: #6a1b9a; }
+  #word small { font-size: .5em; color: #9c7bb0; margin-left: 8px; }
+  .choices.two { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; flex: 1.4; }
+  .choice { flex-direction: column; gap: 6px; padding: 8px; }
+  .choice .pic { flex: 1; width: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; font-size: min(18vw, 90px); line-height: 1; }
+  .choice .pic img { height: var(--sz, 80%); width: var(--sz, 80%); object-fit: contain; }
+  .choice .pic .bar { height: 22%; background: #7e57c2; border-radius: 12px; width: var(--w, 80%); }
+  .choice .pic.dark { background: #263238; border-radius: 16px; width: 90%; height: 90%; }
+  .choice .pic.bright { background: #fff59d; border-radius: 16px; width: 90%; height: 90%; }
+  .choice .pic.top { align-items: flex-start; } .choice .pic.bottom { align-items: flex-end; }
+  .choice .pic .run { animation: run var(--dur, 2s) linear infinite; }
+  @keyframes run { 0% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+  .choice .lab { font-size: 18px; font-weight: bold; color: #789; opacity: 0; }
+  .choices.reveal .lab { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">↔️</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question"></div>
+  <div class="stars" id="stars"></div>
+  <div id="word"></div>
+  <div class="choices two" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  // それぞれの言葉を「絵」でどう見せるか
+  const PAIRS = [
+    { a: 'おおきい', b: 'ちいさい', draw: (which, p) => `<div class="pic" style="--sz:${which === 0 ? 90 : 35}%"><img src="${p.set.dir}/${p.item.id}.png"></div>` },
+    { a: 'ながい',   b: 'みじかい', draw: (which) => `<div class="pic"><div class="bar" style="--w:${which === 0 ? 90 : 30}%"></div></div>` },
+    { a: 'おおい',   b: 'すくない', draw: (which, p) => `<div class="pic" style="flex-wrap:wrap;gap:2px">${'<img src="' + p.set.dir + '/' + p.item.id + '.png" style="width:30%;height:30%">'.repeat(which === 0 ? 6 : 1)}</div>` },
+    { a: 'たかい',   b: 'ひくい',   draw: (which) => `<div class="pic ${which === 0 ? 'top' : 'bottom'}">🐦</div>` },
+    { a: 'あかるい', b: 'くらい',   draw: (which) => `<div class="pic ${which === 0 ? 'bright' : 'dark'}">${which === 0 ? '☀️' : '🌙'}</div>` },
+    { a: 'はやい',   b: 'おそい',   draw: (which) => `<div class="pic" style="overflow:hidden"><span class="run" style="--dur:${which === 0 ? '1s' : '5s'}">${which === 0 ? '🐇' : '🐢'}</span></div>` },
+    { a: 'あつい',   b: 'さむい',   draw: (which) => `<div class="pic">${which === 0 ? '🔥' : '⛄'}</div>` },
+    { a: 'うえ',     b: 'した',     draw: (which) => `<div class="pic">${which === 0 ? '⬆️' : '⬇️'}</div>` },
+  ];
+  const word = document.getElementById('word');
+  const choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const question = document.getElementById('question');
+  const state = { pair: null, ask: '', ans: '', ansIdx: 0, busy: false, score: Baby.getLevel() };
+
+  function ask() { say(`${state.ask}の はんたいは？`); }
+  function newRound() {
+    state.busy = false;
+    state.pair = Baby.fresh('opp', () => pick(PAIRS), p => p.a);
+    const askA = Math.random() < 0.5;
+    state.ask = askA ? state.pair.a : state.pair.b;
+    state.ans = askA ? state.pair.b : state.pair.a;
+    const p = pick(allItems());
+    const order = shuffle([0, 1]);                 // 0 = a の絵, 1 = b の絵
+    state.ansIdx = order.indexOf(askA ? 1 : 0);
+    choices.classList.remove('reveal');
+    choices.innerHTML = '';
+    order.forEach((which, i) => {
+      const c = document.createElement('div'); c.className = 'choice'; c.dataset.i = i;
+      c.innerHTML = state.pair.draw(which, p) + `<div class="lab">${which === 0 ? state.pair.a : state.pair.b}</div>`;
+      choices.appendChild(c);
+    });
+    word.innerHTML = `${state.ask}<small>の はんたいは？</small>`;
+    question.textContent = 'はんたいことば';
+    Baby.prime([`${state.ans}！`, `${state.ask}の はんたいは？`]);
+    ask();
+  }
+
+  choices.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.choice');
+    if (!c || state.busy) return;
+    e.preventDefault();
+    burst(e.clientX, e.clientY, 5);
+    if (Number(c.dataset.i) === state.ansIdx) {
+      state.busy = true;
+      choices.classList.add('reveal');
+      animate(c, 'glow', 900);
+      SFX.correct();
+      state.score++; Baby.setLevel(state.score);
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      sayThen([Baby.praise(), `${state.ask}の はんたいは`, `${state.ans}！`], { delay: 300 }, () => {
+        if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
+      }, 700);
+    } else {
+      animate(c, 'shake', 400);
+      SFX.wrong();
+      say([`それは ${state.ask}。`, `${state.ask}の はんたいは？`], { delay: 200 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

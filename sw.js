@@ -2,7 +2,7 @@
    方針:
    - 画像・音声（assets/ 配下の png/mp3）: キャッシュ優先（変わらないので速く）
    - それ以外（HTML/JS/CSS/JSON）: ネット優先、失敗したらキャッシュ（更新がすぐ届く） */
-const CACHE = 'asobi-v2';
+const CACHE = 'asobi-v3';
 const CORE = ['./', './index.html', './common.css', './common.js', './catalog.js', './games.js', './game.css', './manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
@@ -24,7 +24,8 @@ self.addEventListener('fetch', (e) => {
       return res;
     })));
   } else {
-    e.respondWith(fetch(e.request).then(res => {
+    // ブラウザの HTTP キャッシュに古い JS が残ることがあるので、必ずサーバーに確認する
+    e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
       return res;
     }).catch(() => caches.match(e.request)));

@@ -28,43 +28,63 @@
              calc(env(safe-area-inset-bottom) + 8px) calc(env(safe-area-inset-left) + 8px);
     display: flex; flex-direction: column; gap: 8px;
   }
-  header { display: flex; align-items: center; gap: 6px; height: 60px; }
+  header { display: flex; align-items: center; gap: 6px; height: 56px; }
   header .title { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; }
-  header img.mascot { height: 56px; width: 56px; flex: 0 0 auto; object-fit: contain; animation: wiggle 2.4s ease-in-out infinite; }
+  header img.mascot { height: 52px; width: 52px; flex: 0 0 auto; object-fit: contain; animation: wiggle 2.4s ease-in-out infinite; }
   header h1 {
     margin: 0; font-size: min(5.4vw, 24px); color: #fff; white-space: nowrap; overflow: hidden;
     text-shadow: 0 2px 0 #4a90c2, 0 4px 0 rgba(0,0,0,.12); letter-spacing: 1px;
   }
-  /* シール帳へ */
   #stickerBtn {
-    flex: 0 0 auto; height: 48px; padding: 0 10px 0 6px; border-radius: 24px; border: 3px solid #ffb300;
+    flex: 0 0 auto; height: 46px; padding: 0 10px 0 6px; border-radius: 23px; border: 3px solid #ffb300;
     background: #fff; text-decoration: none; color: #7a5200; font-weight: bold; font-size: 15px;
     display: flex; align-items: center; gap: 4px; box-shadow: 0 4px 0 #ffb300;
   }
-  #stickerBtn img { width: 32px; height: 32px; object-fit: contain; }
+  #stickerBtn img { width: 30px; height: 30px; object-fit: contain; }
   #stickerBtn:active { transform: translateY(3px); box-shadow: 0 1px 0 #ffb300; }
-  /* おうちのひと（長押し） */
   #parentBtn { flex: 0 0 auto; position: relative; width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,.5); font-size: 20px; touch-action: none; overflow: hidden; }
   #parentBtn::after { content: ""; position: absolute; left: 0; bottom: 0; height: 4px; width: 0; background: #ff8c42; }
   #parentBtn.holding::after { width: 100%; transition: width 2s linear; }
-  .menu { flex: 1; min-height: 0; display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; }
-  @media (orientation: landscape) { .menu { grid-template-columns: repeat(7, 1fr); } }
+
+  /* カテゴリのタブ */
+  #tabs { display: flex; gap: 6px; }
+  .tab {
+    flex: 1; height: 58px; border: 3px solid rgba(255,255,255,.7); border-radius: 18px;
+    background: rgba(255,255,255,.55); color: #345; font-family: inherit; font-weight: bold; font-size: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    touch-action: none;
+  }
+  .tab .ic { font-size: 22px; line-height: 1; }
+  .tab.on { background: #fff; border-color: var(--edge, #ffb74d); box-shadow: 0 4px 0 var(--edge, #ffb74d); transform: translateY(-2px); }
+  .tab[data-cat="kazu"]    { --edge: #ffb74d; }
+  .tab[data-cat="atama"]   { --edge: #ff8a65; }
+  .tab[data-cat="kotoba"]  { --edge: #ba68c8; }
+  .tab[data-cat="ugoki"]   { --edge: #4fc3f7; }
+  .tab[data-cat="tsukuru"] { --edge: #f48fb1; }
+
+  .menu { flex: 1; min-height: 0; display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; }
+  .menu.many { grid-template-columns: repeat(4, 1fr); }
+  @media (orientation: landscape) { .menu, .menu.many { grid-template-columns: repeat(6, 1fr); } }
   .tile {
     position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
     border-radius: 18px; background: #fff; box-shadow: 0 5px 0 var(--edge, #cfd8dc);
     text-decoration: none; min-height: 0; overflow: hidden; border: 3px solid var(--edge, #cfd8dc);
+    animation: tile-in .25s ease both;
   }
+  @keyframes tile-in { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   .tile:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--edge); }
-  .tile .pic { position: absolute; inset: 4px 4px 24px; display: flex; align-items: center; justify-content: center; font-size: min(8vmin, 40px); line-height: 1; }
+  .tile .pic { position: absolute; inset: 4px 4px 24px; display: flex; align-items: center; justify-content: center; font-size: min(9vmin, 44px); line-height: 1; }
   .tile .pic img { width: 100%; height: 100%; object-fit: contain; }
   .tile .name {
     width: 100%; height: 22px; display: flex; align-items: center; justify-content: center;
     background: var(--edge, #cfd8dc); color: #fff; font-size: 11px; font-weight: bold;
     text-shadow: 0 1px 0 rgba(0,0,0,.15); white-space: nowrap;
   }
-  .think  { --edge: #ffb74d; }
-  .play   { --edge: #4fc3f7; }
-  .create { --edge: #f48fb1; }
+  .kazu    { --edge: #ffb74d; }
+  .atama   { --edge: #ff8a65; }
+  .kotoba  { --edge: #ba68c8; }
+  .ugoki   { --edge: #4fc3f7; }
+  .tsukuru { --edge: #f48fb1; }
   .note { font-size: 11px; color: #4a6b8a; text-align: center; margin: 0; }
   /* おうちのひと用の計算ゲート */
   #gate { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; background: rgba(40,50,70,.85); }
@@ -87,9 +107,10 @@
     </div>
     <a id="stickerBtn" href="stickers.html" aria-label="シールちょう"><img src="assets/icons/trophy.png" alt=""><span id="stickerCount"></span></a>
   </header>
+  <div id="tabs"></div>
   <div class="menu" id="menu"></div>
-  <div id="gate"><div class="box"><div class="q" id="gateQ"></div><div class="nums" id="gateNums"></div><button class="cancel" id="gateCancel" type="button">やめる</button></div></div>
   <p class="note">🏠 を1.5秒長押しでもどる ／ ⚙️ を2秒長押しで おうちのひと（計算あり）</p>
+  <div id="gate"><div class="box"><div class="q" id="gateQ"></div><div class="nums" id="gateNums"></div><button class="cancel" id="gateCancel" type="button">やめる</button></div></div>
 </div>
 
 <script src="common.js"></script>
@@ -99,23 +120,46 @@
   const d = Baby.load();
   const disabled = new Set(d.settings.disabled || []);
   const menu = document.getElementById('menu');
-  for (const g of GAMES) {
-    if (disabled.has(g.id)) continue;
-    const a = document.createElement('a');
-    a.className = `tile ${g.cls}`;
-    a.href = `${g.id}.html`;
-    const pic = document.createElement('div'); pic.className = 'pic';
-    const img = document.createElement('img');
-    img.src = `assets/icons/${g.id}.png`; img.alt = '';
-    img.onerror = () => { pic.textContent = g.icon; };      // 絵がまだ無ければ絵文字
-    pic.appendChild(img);
-    const name = document.createElement('div'); name.className = 'name'; name.textContent = g.name;
-    a.append(pic, name);
-    a.addEventListener('pointerdown', () => { Baby.ensureAudio(); Baby.SFX.pop(); });
-    menu.appendChild(a);
+  const tabs = document.getElementById('tabs');
+  let current = (d.settings.lastTab && CATEGORIES.some(c => c.id === d.settings.lastTab)) ? d.settings.lastTab : CATEGORIES[0].id;
+
+  // タブ（カテゴリ）。前回開いていたタブを覚えておく
+  for (const c of CATEGORIES) {
+    const b = document.createElement('button');
+    b.className = 'tab'; b.type = 'button'; b.dataset.cat = c.id;
+    b.innerHTML = `<span class="ic">${c.icon}</span>${c.name}`;
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); Baby.ensureAudio(); Baby.SFX.flip(); show(c.id); });
+    tabs.appendChild(b);
   }
+
+  function show(cat) {
+    current = cat;
+    [...tabs.children].forEach(t => t.classList.toggle('on', t.dataset.cat === cat));
+    const list = GAMES.filter(g => g.cat === cat && !disabled.has(g.id));
+    menu.classList.toggle('many', list.length > 9);
+    menu.innerHTML = '';
+    list.forEach((g, i) => {
+      const a = document.createElement('a');
+      a.className = `tile ${g.cat}`;
+      a.href = `${g.id}.html`;
+      a.style.animationDelay = `${i * 25}ms`;
+      const pic = document.createElement('div'); pic.className = 'pic';
+      const img = document.createElement('img');
+      img.src = `assets/icons/${g.id}.png`; img.alt = '';
+      img.onerror = () => { pic.textContent = g.icon; };      // 絵がまだ無ければ絵文字
+      pic.appendChild(img);
+      const name = document.createElement('div'); name.className = 'name'; name.textContent = g.name;
+      a.append(pic, name);
+      a.addEventListener('pointerdown', () => { Baby.ensureAudio(); Baby.SFX.pop(); });
+      menu.appendChild(a);
+    });
+    const dd = Baby.load(); dd.settings.lastTab = cat; Baby.save(dd);
+  }
+  show(current);
+
   const n = d.stickers.length;
   document.getElementById('stickerCount').textContent = n ? `${n}` : '';
+
   // タイトル（親ページで変更できる）
   const title = (d.settings.title || '').trim() || '4さいの あそび';
   document.querySelector('header h1').textContent = title;
@@ -127,9 +171,9 @@
     const a = 3 + Math.floor(Math.random() * 6), b = 2 + Math.floor(Math.random() * 6);
     document.getElementById('gateQ').textContent = `${a} + ${b} = ?`;
     const nums = document.getElementById('gateNums'); nums.innerHTML = '';
-    for (let n = 5; n <= 14; n++) {
-      const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = n;
-      btn.addEventListener('click', () => { if (n === a + b) location.href = 'parent.html'; else { gate.classList.remove('show'); Baby.SFX.wrong(); } });
+    for (let k = 5; k <= 14; k++) {
+      const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = k;
+      btn.addEventListener('click', () => { if (k === a + b) location.href = 'parent.html'; else { gate.classList.remove('show'); Baby.SFX.wrong(); } });
       nums.appendChild(btn);
     }
     gate.classList.add('show');

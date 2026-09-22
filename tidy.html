@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>かたづけ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fff3e0">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #fff3e0 0%, #fffaf3 100%); }
+  #floor { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; }
+  .item { position: absolute; width: 34%; aspect-ratio: 1; transform: translate(-50%, -50%); touch-action: none; z-index: 2; transition: left .2s, top .2s; }
+  .item.drag { transition: none; z-index: 5; filter: drop-shadow(0 8px 6px rgba(0,0,0,.25)); }
+  .item img { width: 100%; height: 100%; object-fit: contain; }
+  #boxes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; height: 26%; }
+  .box { border-radius: 22px; background: #fff; box-shadow: 0 6px 0 rgba(0,0,0,.1); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: min(12vw, 52px); line-height: 1; border: 4px solid transparent; }
+  .box small { font-size: 14px; color: #789; font-weight: bold; margin-top: 4px; }
+  .box.over { border-color: #ffb74d; background: #fff6b3; }
+  .box.got { animation: bounce .5s; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">📦</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">どこに かたづける？</div>
+  <div class="stars" id="stars"></div>
+  <div id="floor"></div>
+  <div id="boxes">
+    <div class="box" data-set="animals">🏠<small>どうぶつ</small></div>
+    <div class="box" data-set="vehicles">🚗<small>のりもの</small></div>
+    <div class="box" data-set="foods">🧊<small>たべもの</small></div>
+  </div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, celebrate, cheer, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const floor = document.getElementById('floor');
+  const boxes = document.getElementById('boxes');
+  const stars = document.getElementById('stars');
+  const state = { queue: [], cur: null, done: 0, score: Baby.getLevel(), drag: null };
+
+  function newRound() {
+    state.queue = shuffle(allItems()).slice(0, 6); state.done = 0;
+    say('どこに かたづける？ はこまで うごかそう');
+    nextItem();
+  }
+  function nextItem() {
+    floor.innerHTML = '';
+    if (!state.queue.length) {
+      state.score++; Baby.setLevel(state.score);
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      SFX.fanfare(); cheer('🎉'); celebrate();
+      Baby.say('ぜんぶ かたづいた！ すごい！', { delay: 400 }).then(() => Baby.reward()).then(newRound);
+      return;
+    }
+    state.cur = state.queue.shift();
+    const el = document.createElement('div'); el.className = 'item';
+    el.style.left = '50%'; el.style.top = '50%';
+    el.innerHTML = `<img src="${state.cur.set.dir}/${state.cur.item.id}.png" alt="">`;
+    floor.appendChild(el);
+    say(state.cur.item.name, { delay: 300 });
+  }
+
+  const boxAt = (x, y) => [...boxes.children].find(b => { const r = b.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; });
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('.item'); if (!el) return;
+    e.preventDefault();
+    const r = el.getBoundingClientRect();
+    state.drag = { el, ox: e.clientX - (r.left + r.width / 2), oy: e.clientY - (r.top + r.height / 2) };
+    el.classList.add('drag');
+    el.style.position = 'fixed'; el.style.width = `${r.width}px`; el.style.height = `${r.height}px`;
+    el.style.left = `${r.left + r.width / 2}px`; el.style.top = `${r.top + r.height / 2}px`;
+    document.body.appendChild(el);
+    SFX.pop();
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!state.drag) return; e.preventDefault();
+    state.drag.el.style.left = `${e.clientX - state.drag.ox}px`; state.drag.el.style.top = `${e.clientY - state.drag.oy}px`;
+    const b = boxAt(e.clientX, e.clientY);
+    [...boxes.children].forEach(x => x.classList.toggle('over', x === b));
+  });
+  document.addEventListener('pointerup', (e) => {
+    if (!state.drag) return;
+    const { el } = state.drag; state.drag = null;
+    [...boxes.children].forEach(x => x.classList.remove('over'));
+    const b = boxAt(e.clientX, e.clientY);
+    if (b && b.dataset.set === state.cur.set.key) {
+      el.remove();
+      animate(b, 'got', 500);
+      SFX.correct(); burst(e.clientX, e.clientY, 8);
+      state.done++;
+      Baby.say([Baby.praise(), `${state.cur.item.name}は`, `${state.cur.set.label}だね`], { delay: 200 }).then(() => setTimeout(nextItem, 300));
+    } else {
+      if (b) { SFX.wrong(); say([`${state.cur.item.name}は`, `${b.dataset.set === 'animals' ? 'どうぶつ' : b.dataset.set === 'vehicles' ? 'のりもの' : 'たべもの'}じゃないよ。`], { delay: 100 }); }
+      el.classList.remove('drag');
+      el.style.position = ''; el.style.width = ''; el.style.height = ''; el.style.left = '50%'; el.style.top = '50%';
+      floor.appendChild(el);
+    }
+  });
+
+  setupStart(() => setTimeout(newRound, 300));
+  setupHome();
+})();
+</script>
+</body>
+</html>

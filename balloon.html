@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ふうせんわり</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#bde6ff">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #8fd3ff 0%, #d9f3ff 100%); }
+  #sky { flex: 1; min-height: 0; position: relative; overflow: hidden; border-radius: 24px; }
+  .balloon {
+    position: absolute; bottom: -30%; width: 22%; aspect-ratio: 0.8;
+    display: flex; align-items: center; justify-content: center;
+    font-size: min(10vw, 44px); font-weight: bold; color: rgba(0,0,0,.55);
+    animation: rise var(--dur, 7s) linear forwards;
+    filter: drop-shadow(0 4px 0 rgba(0,0,0,.12));
+  }
+  .balloon::before { content: ""; position: absolute; inset: 0; border-radius: 50% 50% 50% 50% / 45% 45% 55% 55%; background: var(--c); }
+  .balloon::after { content: ""; position: absolute; left: 50%; bottom: -30%; width: 2px; height: 30%; background: rgba(0,0,0,.25); }
+  .balloon span { position: relative; }
+  @keyframes rise { to { transform: translateY(-160vh); } }
+  .balloon.pop { animation: none; transform: scale(1.4); opacity: 0; transition: transform .15s, opacity .15s; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🎈</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question"></div>
+  <div class="stars" id="stars"></div>
+  <div id="sky"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, animate, setupStart, setupHome, pick, tone } = Baby;
+  const COLS = [['red', 'あか', '#ff5252'], ['yellow', 'きいろ', '#ffd93d'], ['green', 'みどり', '#5ad36b'], ['blue', 'あお', '#4da3ff'], ['pink', 'ピンク', '#f8a5c2'], ['purple', 'むらさき', '#b388ff']];
+  const READ = ['', 'いち', 'に', 'さん', 'よん', 'ご'];
+  const sky = document.getElementById('sky');
+  const question = document.getElementById('question');
+  const stars = document.getElementById('stars');
+  const state = { mode: 'color', target: null, hits: 0, score: Baby.getLevel(), spawner: null, busy: false };
+
+  function ask() {
+    if (state.mode === 'color') say(`${state.target[1]}の ふうせんを わって！`);
+    else say(`${READ[state.target]}の ふうせんを わって！`);
+  }
+  function newTask() {
+    state.hits = 0; state.busy = false;
+    state.mode = state.score >= 3 && Math.random() < 0.5 ? 'number' : 'color';
+    if (state.mode === 'color') { state.target = Baby.fresh('bal-c', () => pick(COLS), c => c[0]); question.textContent = `${state.target[1]}の ふうせん`; }
+    else { state.target = Baby.fresh('bal-n', () => 1 + Math.floor(Math.random() * 5), String); question.textContent = `${state.target}の ふうせん`; }
+    ask();
+  }
+  function spawn() {
+    if (state.busy) return;
+    const b = document.createElement('div'); b.className = 'balloon';
+    const col = pick(COLS); const num = 1 + Math.floor(Math.random() * 5);
+    // 4回に1回は必ず正解の風船を出す
+    const force = Math.random() < 0.35;
+    b.dataset.color = force && state.mode === 'color' ? state.target[0] : col[0];
+    b.dataset.num = force && state.mode === 'number' ? state.target : num;
+    const c = COLS.find(x => x[0] === b.dataset.color);
+    b.style.setProperty('--c', c[2]);
+    b.style.left = `${Math.random() * 78}%`;
+    b.style.setProperty('--dur', `${6 + Math.random() * 4}s`);
+    b.innerHTML = state.mode === 'number' ? `<span>${b.dataset.num}</span>` : '';
+    sky.appendChild(b);
+    b.addEventListener('animationend', () => b.remove());
+  }
+  sky.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.balloon');
+    if (!b || state.busy || b.classList.contains('pop')) return;
+    e.preventDefault();
+    const ok = state.mode === 'color' ? b.dataset.color === state.target[0] : Number(b.dataset.num) === state.target;
+    if (ok) {
+      b.classList.add('pop'); setTimeout(() => b.remove(), 200);
+      tone({ type: 'square', f0: 900, f1: 300, dur: 0.12, gain: 0.2, lowpass: 3000 });
+      burst(e.clientX, e.clientY, 8);
+      state.hits++;
+      stars.textContent = '⭐'.repeat(state.hits);
+      if (state.hits >= 5) {
+        state.busy = true;
+        SFX.correct();
+        state.score++; Baby.setLevel(state.score);
+        Baby.say(Baby.praise(), { delay: 300 }).then(() => Baby.reward()).then(newTask);
+      }
+    } else {
+      animate(b, 'shake', 400);
+      SFX.wrong();
+      say(['ちがうよ。', state.mode === 'color' ? `${state.target[1]}の ふうせんを わって！` : `${READ[state.target]}の ふうせんを わって！`], { delay: 100 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => { newTask(); state.spawner = setInterval(spawn, 1100); });
+  setupHome();
+})();
+</script>
+</body>
+</html>

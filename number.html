@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>すうじあて</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fff4c8">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #fff4c8 0%, #ffe9a8 100%); }
+  #dots { flex: 0.8; min-height: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); padding: 10px; }
+  #dots span { width: 12%; aspect-ratio: 1; border-radius: 50%; background: #ff8c42; box-shadow: 0 3px 0 rgba(0,0,0,.12); }
+  .choices { flex: 1.2; }
+  .choice { font-size: min(22vw, 110px); font-weight: bold; color: #345; background: #fff; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">7️⃣</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question"></div>
+  <div class="stars" id="stars"></div>
+  <div id="dots"></div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle } = Baby;
+  const READ = ['', 'いち', 'に', 'さん', 'よん', 'ご', 'ろく', 'なな', 'はち', 'きゅう', 'じゅう'];
+  const question = document.getElementById('question');
+  const dots = document.getElementById('dots');
+  const choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const state = { n: 0, opts: [], busy: false, score: Baby.getLevel() };
+
+  function ask() { say(`${READ[state.n]}は どれかな？`); }
+  function newRound() {
+    state.busy = false;
+    const max = state.score < 5 ? 5 : 10;                 // 慣れたら 10 まで
+    state.n = Baby.fresh('number', () => 1 + Math.floor(Math.random() * max), String);
+    const set = new Set([state.n]);
+    while (set.size < 3) set.add(1 + Math.floor(Math.random() * max));
+    state.opts = shuffle([...set]);
+    // 数字の数だけ丸を出す（数字と量を結びつける）
+    dots.innerHTML = '';
+    for (let i = 0; i < state.n; i++) dots.appendChild(document.createElement('span'));
+    choices.innerHTML = '';
+    for (const v of state.opts) {
+      const c = document.createElement('div'); c.className = 'choice'; c.dataset.v = v; c.textContent = v;
+      choices.appendChild(c);
+    }
+    question.textContent = `「${READ[state.n]}」は どれ？`;
+    Baby.prime([`${READ[state.n]}！`, ...state.opts.map(v => `${READ[v]}じゃないよ。`)]);
+    ask();
+  }
+
+  choices.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.choice');
+    if (!c || state.busy) return;
+    e.preventDefault();
+    const v = Number(c.dataset.v);
+    burst(e.clientX, e.clientY, 5);
+    if (v === state.n) {
+      state.busy = true;
+      animate(c, 'glow', 900);
+      SFX.correct();
+      state.score++; Baby.setLevel(state.score);
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      sayThen([Baby.praise(), `${READ[v]}！`], { delay: 300 }, () => {
+        if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
+      }, 600);
+    } else {
+      animate(c, 'shake', 400);
+      SFX.wrong();
+      say([`${READ[v]}じゃないよ。`, `${READ[state.n]}は どれかな？`], { delay: 200 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

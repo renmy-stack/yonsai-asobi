@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>なぞりがき</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fff8e1">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #fff8e1 0%, #fffdf5 100%); }
+  #sets { display: flex; gap: 8px; justify-content: center; }
+  .set { height: 40px; padding: 0 14px; border-radius: 20px; border: none; background: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.12); font-size: 16px; font-weight: bold; color: #345; font-family: inherit; touch-action: none; }
+  .set.on { background: #ffd84d; }
+  #wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { max-width: 100%; max-height: 100%; border-radius: 24px; background: #fff; box-shadow: 0 6px 0 rgba(0,0,0,.08); touch-action: none; }
+  #meter { height: 12px; border-radius: 6px; background: #e0e0e0; overflow: hidden; }
+  #meter i { display: block; height: 100%; width: 0; background: #ff8c42; transition: width .2s; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">✍️</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div id="sets">
+    <button class="set on" data-set="shape" type="button">かたち</button>
+    <button class="set" data-set="num" type="button">すうじ</button>
+    <button class="set" data-set="kana" type="button">ひらがな</button>
+  </div>
+  <div class="stars" id="stars"></div>
+  <div id="wrap"><canvas id="cv" width="640" height="640"></canvas></div>
+  <div id="meter"><i></i></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="next" class="topbtn right" type="button">つぎ ▶</button>
+
+<script src="common.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, celebrate, cheer, setupStart, setupHome, pick, tone } = Baby;
+  const SETS = {
+    shape: ['○', '△', '□', '☆', '♡', '〜'],
+    num: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+    kana: [...'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん'],
+  };
+  const READ = { '○': 'まる', '△': 'さんかく', '□': 'しかく', '☆': 'ほし', '♡': 'ハート', '〜': 'なみせん',
+    '1': 'いち', '2': 'に', '3': 'さん', '4': 'よん', '5': 'ご', '6': 'ろく', '7': 'なな', '8': 'はち', '9': 'きゅう', '10': 'じゅう' };
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  const meter = document.querySelector('#meter i');
+  const stars = document.getElementById('stars');
+  const S = 640;
+  const state = { set: 'shape', idx: 0, mask: null, maskCount: 0, drawing: false, last: null, done: false, score: Baby.getLevel() };
+
+  function fit() {
+    const box = document.getElementById('wrap').getBoundingClientRect();
+    const s = Math.min(box.width, box.height);
+    cv.style.width = cv.style.height = `${Math.floor(s)}px`;
+  }
+  window.addEventListener('resize', fit);
+
+  // お手本を描く（薄いグレー）。マスク（お手本の画素）も作る
+  function drawGlyph(target, color) {
+    target.fillStyle = '#fff'; target.fillRect(0, 0, S, S);
+    target.strokeStyle = color; target.fillStyle = color;
+    target.lineWidth = 34; target.lineCap = 'round'; target.lineJoin = 'round';
+    const ch = current();
+    target.beginPath();
+    if (state.set === 'shape') {
+      if (ch === '○') target.arc(S / 2, S / 2, 220, 0, Math.PI * 2);
+      else if (ch === '△') { target.moveTo(S / 2, 110); target.lineTo(540, 520); target.lineTo(100, 520); target.closePath(); }
+      else if (ch === '□') target.rect(120, 120, 400, 400);
+      else if (ch === '☆') { for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i * Math.PI * 4 / 5; const x = S / 2 + Math.cos(a) * 230, y = S / 2 + 20 + Math.sin(a) * 230; i ? target.lineTo(x, y) : target.moveTo(x, y); } target.closePath(); }
+      else if (ch === '♡') { target.moveTo(320, 560); target.bezierCurveTo(80, 380, 60, 160, 200, 120); target.bezierCurveTo(270, 100, 320, 160, 320, 220); target.bezierCurveTo(320, 160, 370, 100, 440, 120); target.bezierCurveTo(580, 160, 560, 380, 320, 560); }
+      else { target.moveTo(80, 320); target.bezierCurveTo(180, 120, 260, 120, 320, 320); target.bezierCurveTo(380, 520, 460, 520, 560, 320); }
+      target.stroke();
+    } else {
+      target.font = `bold ${state.set === 'num' && ch.length > 1 ? 380 : 520}px "Hiragino Maru Gothic ProN", "Rounded Mplus 1c", "Yu Gothic", sans-serif`;
+      target.textAlign = 'center'; target.textBaseline = 'middle';
+      target.fillText(ch, S / 2, S / 2 + 20);
+    }
+  }
+  const current = () => SETS[state.set][state.idx];
+
+  function load() {
+    state.done = false;
+    drawGlyph(ctx, '#d7d7d7');
+    // マスク: 別キャンバスに黒で描いて画素を数える
+    const m = document.createElement('canvas'); m.width = m.height = S;
+    const mc = m.getContext('2d', { willReadFrequently: true });
+    drawGlyph(mc, '#000');
+    const data = mc.getImageData(0, 0, S, S).data;
+    state.mask = new Uint8Array(S * S); state.maskCount = 0;
+    for (let i = 0; i < S * S; i++) if (data[i * 4] < 128) { state.mask[i] = 1; state.maskCount++; }
+    meter.style.width = '0';
+    fit();
+    const ch = current();
+    say(READ[ch] || ch);
+  }
+  function progress() {
+    const data = ctx.getImageData(0, 0, S, S).data;
+    let hit = 0;
+    for (let i = 0; i < S * S; i++) if (state.mask[i] && data[i * 4] > 200 && data[i * 4 + 2] < 120) hit++;   // オレンジで塗られた部分
+    const p = hit / state.maskCount;
+    meter.style.width = `${Math.min(100, Math.round(p * 100))}%`;
+    if (p >= 0.7 && !state.done) {
+      state.done = true;
+      SFX.correct(); cheer('🎉'); celebrate();
+      state.score++; Baby.setLevel(state.score);
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      Baby.say(['できた！', READ[current()] || current()], { delay: 300 }).then(() => state.score % 5 === 0 ? Baby.reward() : null).then(() => setTimeout(next, 500));
+    }
+  }
+  function next() { state.idx = (state.idx + 1) % SETS[state.set].length; load(); }
+
+  const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * S, y: (e.clientY - r.top) / r.height * S }; };
+  cv.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); if (state.done) return;
+    try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+    state.drawing = true; state.last = pos(e);
+    ctx.strokeStyle = '#ff8c42'; ctx.lineWidth = 40; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(state.last.x, state.last.y); ctx.lineTo(state.last.x + 0.1, state.last.y); ctx.stroke();
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (!state.drawing) return; e.preventDefault();
+    const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(state.last.x, state.last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    state.last = p;
+  });
+  const stop = () => { if (state.drawing) { state.drawing = false; tone({ type: 'sine', f0: 500, dur: 0.06, gain: 0.06 }); progress(); } };
+  cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop);
+
+  document.getElementById('sets').addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.set'); if (!b) return; e.preventDefault();
+    state.set = b.dataset.set; state.idx = 0;
+    [...b.parentNode.children].forEach(x => x.classList.toggle('on', x === b));
+    SFX.pop(); load();
+  });
+  document.getElementById('next').addEventListener('pointerdown', (e) => { e.preventDefault(); next(); });
+  setupStart(() => setTimeout(load, 300));
+  setupHome();
+})();
+</script>
+</body>
+</html>

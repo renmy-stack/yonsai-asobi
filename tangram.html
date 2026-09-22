@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>かたちはめ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e3f2fd">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e3f2fd 0%, #f5fbff 100%); }
+  #board { flex: 1.1; min-height: 0; position: relative; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  #tray { flex: 0.8; min-height: 0; position: relative; border-radius: 28px; background: rgba(255,255,255,.4); }
+  .slot { position: absolute; width: 26%; aspect-ratio: 1; transform: translate(-50%, -50%); }
+  .slot svg path { fill: rgba(0,0,0,.08); stroke: #999; stroke-width: 4; stroke-dasharray: 8 6; }
+  .slot.done svg path { stroke: none; }
+  .piece { position: absolute; width: 26%; aspect-ratio: 1; transform: translate(-50%, -50%); touch-action: none; z-index: 2; transition: left .15s, top .15s; }
+  .piece.drag { transition: none; z-index: 5; filter: drop-shadow(0 8px 6px rgba(0,0,0,.25)); }
+  .piece svg path { stroke: #333; stroke-width: 4; stroke-linejoin: round; }
+  .piece.placed { pointer-events: none; }
+  svg { width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🔺</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">おなじ かたちの ところへ うごかそう</div>
+  <div class="stars" id="stars"></div>
+  <div id="board"></div>
+  <div id="tray"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, celebrate, cheer, animate, setupStart, setupHome, shuffle, pick, tone } = Baby;
+  const SHAPES = [
+    { id: 'circle',   name: 'まる',     path: 'M50 5 A45 45 0 1 1 49.9 5 Z', color: '#e53935' },
+    { id: 'triangle', name: 'さんかく', path: 'M50 8 L95 88 L5 88 Z', color: '#1e88e5' },
+    { id: 'square',   name: 'しかく',   path: 'M10 10 H90 V90 H10 Z', color: '#43a047' },
+    { id: 'star',     name: 'ほし',     path: 'M50 5 L61 38 L96 38 L68 59 L79 92 L50 72 L21 92 L32 59 L4 38 L39 38 Z', color: '#fdd835' },
+    { id: 'heart',    name: 'ハート',   path: 'M50 90 C20 65 5 50 5 32 C5 18 16 8 29 8 C38 8 46 13 50 21 C54 13 62 8 71 8 C84 8 95 18 95 32 C95 50 80 65 50 90 Z', color: '#f06292' },
+    { id: 'diamond',  name: 'ひしがた', path: 'M50 5 L92 50 L50 95 L8 50 Z', color: '#8e24aa' },
+    { id: 'hexagon',  name: 'ろっかく', path: 'M27 10 H73 L95 50 L73 90 H27 L5 50 Z', color: '#ff8f00' },
+    { id: 'moon',     name: 'つき',     path: 'M60 5 A45 45 0 1 0 60 95 A35 35 0 1 1 60 5 Z', color: '#80cbc4' },
+  ];
+  const board = document.getElementById('board'), tray = document.getElementById('tray');
+  const stars = document.getElementById('stars');
+  const state = { pieces: [], left: 0, score: Baby.getLevel(), drag: null };
+  const svg = (s, fill) => `<svg viewBox="0 0 100 100"><path d="${s.path}" ${fill ? `fill="${s.color}"` : ''}/></svg>`;
+
+  function newRound() {
+    const n = state.score < 3 ? 3 : state.score < 8 ? 4 : 6;
+    const shapes = shuffle(SHAPES).slice(0, n);
+    board.innerHTML = ''; tray.innerHTML = '';
+    state.pieces = []; state.left = n;
+    // 枠（板の上に散らす）
+    const spots = shuffle([[22, 30], [50, 30], [78, 30], [22, 70], [50, 70], [78, 70]]).slice(0, n);
+    shapes.forEach((s, i) => {
+      const slot = document.createElement('div'); slot.className = 'slot'; slot.dataset.id = s.id;
+      slot.style.left = `${spots[i][0]}%`; slot.style.top = `${spots[i][1]}%`;
+      slot.innerHTML = svg(s, false); board.appendChild(slot);
+    });
+    // ピース（下のトレイに並べる）
+    shuffle(shapes).forEach((s, i) => {
+      const p = document.createElement('div'); p.className = 'piece'; p.dataset.id = s.id;
+      p.style.left = `${(i + 0.5) / n * 100}%`; p.style.top = '50%';
+      p.innerHTML = svg(s, true); tray.appendChild(p);
+      state.pieces.push({ el: p, shape: s, home: [(i + 0.5) / n * 100, 50] });
+    });
+    say('おなじ かたちの ところへ うごかそう');
+  }
+
+  // ドラッグ（body 基準の座標で動かす。トレイ→板をまたぐので fixed に切り替える）
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('.piece'); if (!el || el.classList.contains('placed')) return;
+    e.preventDefault();
+    const r = el.getBoundingClientRect();
+    state.drag = { el, ox: e.clientX - (r.left + r.width / 2), oy: e.clientY - (r.top + r.height / 2), w: r.width };
+    el.classList.add('drag');
+    el.style.position = 'fixed'; el.style.width = `${r.width}px`; el.style.height = `${r.height}px`;
+    el.style.left = `${r.left + r.width / 2}px`; el.style.top = `${r.top + r.height / 2}px`;
+    document.body.appendChild(el);
+    SFX.pop();
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!state.drag) return; e.preventDefault();
+    state.drag.el.style.left = `${e.clientX - state.drag.ox}px`; state.drag.el.style.top = `${e.clientY - state.drag.oy}px`;
+  });
+  document.addEventListener('pointerup', (e) => {
+    if (!state.drag) return;
+    const { el } = state.drag; state.drag = null;
+    el.classList.remove('drag');
+    const piece = state.pieces.find(p => p.el === el);
+    const r = el.getBoundingClientRect(); const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    // 近い枠を探す
+    let best = null, bd = 1e9;
+    board.querySelectorAll('.slot:not(.done)').forEach(s => { const sr = s.getBoundingClientRect(); const d = Math.hypot(sr.left + sr.width / 2 - cx, sr.top + sr.height / 2 - cy); if (d < bd) { bd = d; best = s; } });
+    if (best && bd < r.width * 0.7 && best.dataset.id === piece.shape.id) {
+      // はまった
+      best.classList.add('done'); best.innerHTML = svg(piece.shape, true);
+      el.remove();
+      SFX.correct(); burst(cx, cy, 8);
+      say(piece.shape.name);
+      state.left--;
+      if (state.left === 0) {
+        state.score++; Baby.setLevel(state.score);
+        stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+        setTimeout(() => { SFX.fanfare(); cheer('🎉'); celebrate(); }, 300);
+        Baby.say('ぜんぶ はまった！ すごい！', { delay: 500 }).then(() => state.score % 5 === 0 ? Baby.reward() : null).then(() => setTimeout(newRound, 500));
+      }
+    } else {
+      if (best && bd < r.width * 0.7) { SFX.wrong(); say('ちがう かたちだよ'); }
+      // トレイに戻す
+      el.style.position = ''; el.style.width = ''; el.style.height = '';
+      el.style.left = `${piece.home[0]}%`; el.style.top = `${piece.home[1]}%`;
+      tray.appendChild(el);
+    }
+  });
+
+  setupStart(() => setTimeout(newRound, 300));
+  setupHome();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>なくなったのはどれ？</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ede7f6">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #ede7f6 0%, #f8f5fc 100%); }
+  #table { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; gap: 3%; padding: 10px; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  #table .it { width: 22%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; transition: opacity .3s; }
+  #table .it img { width: 100%; height: 100%; object-fit: contain; }
+  #table .it.gone { opacity: 0; }
+  #table .it.ghost { opacity: 1; border: 4px dashed #ba68c8; border-radius: 16px; font-size: min(10vw, 48px); color: #ba68c8; font-weight: bold; }
+  #curtain { position: absolute; inset: 0; border-radius: 28px; background: repeating-linear-gradient(90deg, #ba68c8 0 24px, #ce93d8 24px 48px); display: flex; align-items: center; justify-content: center; font-size: 60px; opacity: 0; pointer-events: none; transition: opacity .35s; }
+  #curtain.show { opacity: 1; }
+  .choices { flex: 0.9; }
+  .choices.hidden { visibility: hidden; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🫥</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">よく みて おぼえてね</div>
+  <div class="stars" id="stars"></div>
+  <div id="table"><div id="curtain">🙈</div></div>
+  <div class="choices hidden" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const table = document.getElementById('table');
+  const curtain = document.getElementById('curtain');
+  const choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const question = document.getElementById('question');
+  const state = { items: [], gone: null, opts: [], busy: true, score: Baby.getLevel() };
+
+  function newRound() {
+    state.busy = true;
+    const n = state.score < 3 ? 3 : state.score < 8 ? 4 : 5;
+    const set = pick(Object.values(CATALOG));
+    state.items = shuffle(set.items).slice(0, n).map(item => ({ set, item }));
+    state.gone = Baby.fresh('gone', () => pick(state.items), v => v.item.id);
+    // 見せる
+    table.querySelectorAll('.it').forEach(e => e.remove());
+    for (const p of state.items) {
+      const d = document.createElement('div'); d.className = 'it'; d.dataset.id = p.item.id;
+      d.innerHTML = `<img src="${p.set.dir}/${p.item.id}.png" alt="">`;
+      table.insertBefore(d, curtain);
+    }
+    choices.classList.add('hidden'); choices.innerHTML = '';
+    question.textContent = 'よく みて おぼえてね';
+    say('よく みて おぼえてね');
+    // 3秒後にカーテン → 1つ消す → カーテンを開ける
+    setTimeout(() => { curtain.classList.add('show'); SFX.flip(); }, 3500);
+    setTimeout(() => {
+      const el = table.querySelector(`.it[data-id="${state.gone.item.id}"]`);
+      el.classList.add('ghost'); el.innerHTML = '?';
+    }, 4300);
+    setTimeout(() => {
+      curtain.classList.remove('show');
+      const others = shuffle(allItems().filter(p => !state.items.some(q => q.item.id === p.item.id))).slice(0, 2);
+      state.opts = shuffle([state.gone, ...others]);
+      choices.innerHTML = '';
+      state.opts.forEach((p, i) => {
+        const c = document.createElement('div'); c.className = 'choice'; c.dataset.i = i;
+        c.appendChild(makeFace(p.set, p.item)); choices.appendChild(c);
+      });
+      choices.classList.remove('hidden');
+      question.textContent = 'なくなったのは どれ？';
+      say('なくなったのは どれかな？');
+      Baby.prime([`${state.gone.item.name}！`]);
+      state.busy = false;
+    }, 5100);
+  }
+
+  choices.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.choice');
+    if (!c || state.busy) return;
+    e.preventDefault();
+    const p = state.opts[Number(c.dataset.i)];
+    burst(e.clientX, e.clientY, 5);
+    if (p === state.gone) {
+      state.busy = true;
+      animate(c, 'glow', 900);
+      const el = table.querySelector('.ghost'); el.classList.remove('ghost'); el.innerHTML = `<img src="${p.set.dir}/${p.item.id}.png" alt="">`;
+      SFX.correct();
+      state.score++; Baby.setLevel(state.score);
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      sayThen([Baby.praise(), `${p.item.name}！`], { delay: 300 }, () => {
+        if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
+      }, 700);
+    } else {
+      animate(c, 'shake', 400);
+      SFX.wrong();
+      say([`${p.item.name}は あるよ。`, 'なくなったのは どれかな？'], { delay: 200 });
+    }
+  });
+
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

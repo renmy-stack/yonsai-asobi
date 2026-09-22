@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>もぐらたたき</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#c8e6c9">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #bde6ff 0%, #bde6ff 30%, #a5d6a7 30%, #81c784 100%); }
+  #hud { display: flex; justify-content: space-between; align-items: center; font-size: 22px; font-weight: bold; color: #2e5d32; padding: 0 56px; }
+  #field { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px; }
+  .hole { position: relative; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 40%; }
+  .hole::after { content: ""; position: absolute; left: 10%; right: 10%; bottom: 0; height: 28%; border-radius: 50%; background: #5d4037; box-shadow: inset 0 6px 0 rgba(0,0,0,.25); }
+  .hole .who { position: absolute; left: 15%; width: 70%; bottom: 10%; height: 75%; display: flex; align-items: flex-end; justify-content: center; transform: translateY(110%); transition: transform .18s ease-out; z-index: 1; font-size: min(14vmin, 70px); line-height: 1; }
+  .hole .who img { width: 100%; height: 100%; object-fit: contain; }
+  .hole.up .who { transform: translateY(0); }
+  .hole.hit .who { transform: translateY(110%) scale(.8); transition: transform .12s; }
+  #result { position: fixed; inset: 0; z-index: 35; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(255,250,220,.95); font-size: 28px; font-weight: bold; color: #5d4037; }
+  #result.show { display: flex; }
+  #result .big { font-size: 80px; }
+  #result button { margin-top: 10px; height: 52px; padding: 0 24px; border-radius: 26px; border: none; background: #ffd84d; font-size: 20px; font-weight: bold; font-family: inherit; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🐹</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div id="hud"><span id="score">0</span><span id="time">30</span></div>
+  <div class="stars" id="stars"></div>
+  <div id="field"></div>
+</div>
+<div id="result"><div class="big">🎉</div><div id="resText"></div><button id="again" type="button">もういっかい</button></div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, celebrate, cheer, setupStart, setupHome, pick, tone } = Baby;
+  const field = document.getElementById('field');
+  const scoreEl = document.getElementById('score'), timeEl = document.getElementById('time');
+  const result = document.getElementById('result');
+  const ANIMALS = CATALOG.animals.items;
+  const state = { score: 0, time: 30, running: false, timer: null, spawner: null, round: Baby.getLevel() };
+  const holes = [];
+  for (let i = 0; i < 9; i++) {
+    const h = document.createElement('div'); h.className = 'hole'; h.innerHTML = '<div class="who"></div>';
+    field.appendChild(h); holes.push({ el: h, who: null, timeout: null });
+  }
+
+  function popOne() {
+    const free = holes.filter(h => !h.who);
+    if (!free.length) return;
+    const h = pick(free);
+    const bee = Math.random() < 0.2;                 // 2割はハチ（たたいたらダメ）
+    h.who = bee ? { bee: true } : { bee: false, item: pick(ANIMALS) };
+    h.el.querySelector('.who').innerHTML = bee ? '🐝' : `<img src="${CATALOG.animals.dir}/${h.who.item.id}.png" alt="">`;
+    h.el.classList.remove('hit'); void h.el.offsetWidth;
+    h.el.classList.add('up');
+    tone({ type: 'sine', f0: 400, f1: 700, dur: 0.1, gain: 0.08 });
+    const stay = Math.max(700, 1400 - state.round * 60);
+    h.timeout = setTimeout(() => hide(h), stay);
+  }
+  function hide(h) { h.el.classList.remove('up'); clearTimeout(h.timeout); setTimeout(() => { h.who = null; }, 200); }
+
+  field.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('.hole');
+    if (!el || !state.running) return;
+    e.preventDefault();
+    const h = holes.find(x => x.el === el);
+    if (!h.who || !el.classList.contains('up')) return;
+    if (h.who.bee) {
+      state.score = Math.max(0, state.score - 1);
+      SFX.wrong(); say('ハチは だめ！', { delay: 0 });
+      burst(e.clientX, e.clientY, 4, ['💢']);
+    } else {
+      state.score++;
+      SFX[h.who.item.sfx] ? SFX[h.who.item.sfx]() : SFX.pop();
+      burst(e.clientX, e.clientY, 6);
+    }
+    scoreEl.textContent = state.score;
+    el.classList.add('hit'); el.classList.remove('up');
+    clearTimeout(h.timeout); setTimeout(() => { h.who = null; el.classList.remove('hit'); }, 250);
+  });
+
+  function startRound() {
+    state.score = 0; state.time = 30; state.running = true;
+    scoreEl.textContent = 0; timeEl.textContent = 30;
+    result.classList.remove('show');
+    say('でてきた どうぶつを タッチ！ ハチは タッチしないでね');
+    const interval = Math.max(450, 900 - state.round * 40);
+    state.spawner = setInterval(popOne, interval);
+    state.timer = setInterval(() => {
+      state.time--; timeEl.textContent = state.time;
+      if (state.time <= 0) endRound();
+    }, 1000);
+  }
+  function endRound() {
+    state.running = false;
+    clearInterval(state.spawner); clearInterval(state.timer);
+    holes.forEach(hide);
+    state.round++; Baby.setLevel(state.round);
+    document.getElementById('resText').textContent = `${state.score} ひき たたいた！`;
+    result.classList.add('show');
+    SFX.fanfare(); celebrate();
+    const good = state.score >= 10;
+    if (good) SFX.correct();
+    Baby.say(good ? 'おしまい！ すごい！' : 'おしまい！ もういっかい やってみよう', { delay: 400 }).then(() => good ? Baby.reward() : null);
+  }
+  document.getElementById('again').addEventListener('click', startRound);
+  setupStart(() => setTimeout(startRound, 500));
+  setupHome();
+})();
+</script>
+</body>
+</html>

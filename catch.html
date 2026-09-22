@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>くだものキャッチ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#bde6ff">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #8fd3ff 0%, #d9f3ff 70%, #b9f0a6 70%, #a5d6a7 100%); }
+  #hud { display: flex; justify-content: space-between; font-size: 22px; font-weight: bold; color: #2e5d32; padding: 0 56px; }
+  #field { flex: 1; min-height: 0; position: relative; overflow: hidden; touch-action: none; }
+  .drop { position: absolute; top: -12%; width: 12%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: min(10vw, 48px); line-height: 1; will-change: transform; }
+  .drop img { width: 100%; height: 100%; object-fit: contain; }
+  #basket { position: absolute; bottom: 2%; left: 50%; width: 26%; aspect-ratio: 1.4; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; font-size: min(18vw, 90px); line-height: 1; }
+  #basket.got { animation: bounce .4s; }
+  #result { position: fixed; inset: 0; z-index: 35; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(255,250,220,.95); font-size: 28px; font-weight: bold; color: #5d4037; }
+  #result.show { display: flex; }
+  #result .big { font-size: 80px; }
+  #result button { margin-top: 10px; height: 52px; padding: 0 24px; border-radius: 26px; border: none; background: #ffd84d; font-size: 20px; font-weight: bold; font-family: inherit; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🧺</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div id="hud"><span id="score">0</span><span id="time">30</span></div>
+  <div id="field"><div id="basket">🧺</div></div>
+</div>
+<div id="result"><div class="big">🎉</div><div id="resText"></div><button id="again" type="button">もういっかい</button></div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, celebrate, setupStart, setupHome, pick, tone } = Baby;
+  const field = document.getElementById('field');
+  const basket = document.getElementById('basket');
+  const scoreEl = document.getElementById('score'), timeEl = document.getElementById('time');
+  const result = document.getElementById('result');
+  const FOODS = CATALOG.foods.items;
+  const BUGS = ['🐛', '🐝', '🪨'];
+  const state = { score: 0, time: 30, running: false, drops: [], raf: 0, spawner: null, timer: null, x: 0.5, round: Baby.getLevel() };
+
+  // カゴは指の横位置についてくる
+  const moveTo = (clientX) => { const r = field.getBoundingClientRect(); state.x = Math.max(0.13, Math.min(0.87, (clientX - r.left) / r.width)); basket.style.left = `${state.x * 100}%`; };
+  field.addEventListener('pointerdown', (e) => { e.preventDefault(); moveTo(e.clientX); });
+  field.addEventListener('pointermove', (e) => { if (e.buttons || e.pointerType === 'touch') { e.preventDefault(); moveTo(e.clientX); } });
+
+  function spawn() {
+    const bad = Math.random() < 0.2;
+    const el = document.createElement('div'); el.className = 'drop';
+    let item = null;
+    if (bad) el.textContent = pick(BUGS);
+    else { item = pick(FOODS); el.innerHTML = `<img src="${CATALOG.foods.dir}/${item.id}.png" alt="">`; }
+    el.style.left = `${8 + Math.random() * 80}%`;
+    field.appendChild(el);
+    state.drops.push({ el, y: -0.12, v: (0.18 + Math.random() * 0.12 + state.round * 0.02), bad, item, x: parseFloat(el.style.left) / 100 });
+  }
+  let last = 0;
+  function tick(t) {
+    if (!state.running) return;
+    const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
+    const H = field.clientHeight, W = field.clientWidth;
+    for (const d of state.drops.slice()) {
+      d.y += d.v * dt;
+      d.el.style.transform = `translateY(${d.y * H}px)`;
+      // カゴに入ったか（横: カゴ幅の中、縦: カゴの高さ付近）
+      const inX = Math.abs((d.x + 0.06) - state.x) < 0.14;
+      if (d.y > 0.78 && d.y < 0.9 && inX) {
+        if (d.bad) { state.score = Math.max(0, state.score - 1); SFX.wrong(); say('わっ！', { delay: 0 }); }
+        else { state.score++; SFX.munch(); burst(basket.getBoundingClientRect().left + W * 0.13, basket.getBoundingClientRect().top, 5); basket.classList.remove('got'); void basket.offsetWidth; basket.classList.add('got'); }
+        scoreEl.textContent = state.score;
+        d.el.remove(); state.drops.splice(state.drops.indexOf(d), 1);
+      } else if (d.y > 1.05) { d.el.remove(); state.drops.splice(state.drops.indexOf(d), 1); }
+    }
+    state.raf = requestAnimationFrame(tick);
+  }
+  function startRound() {
+    state.score = 0; state.time = 30; state.running = true; state.drops.forEach(d => d.el.remove()); state.drops = [];
+    scoreEl.textContent = 0; timeEl.textContent = 30; result.classList.remove('show');
+    say('おちてくる くだものを カゴで キャッチ！ むしは よけてね');
+    state.spawner = setInterval(spawn, Math.max(500, 1000 - state.round * 40));
+    state.timer = setInterval(() => { state.time--; timeEl.textContent = state.time; if (state.time <= 0) endRound(); }, 1000);
+    last = performance.now(); state.raf = requestAnimationFrame(tick);
+  }
+  function endRound() {
+    state.running = false; clearInterval(state.spawner); clearInterval(state.timer); cancelAnimationFrame(state.raf);
+    state.round++; Baby.setLevel(state.round);
+    document.getElementById('resText').textContent = `${state.score} こ キャッチ！`;
+    result.classList.add('show'); SFX.fanfare(); celebrate();
+    const good = state.score >= 10;
+    Baby.say(good ? 'おしまい！ すごい！' : 'おしまい！ もういっかい やってみよう', { delay: 400 }).then(() => good ? Baby.reward() : null);
+  }
+  document.getElementById('again').addEventListener('click', startRound);
+  setupStart(() => setTimeout(startRound, 500));
+  setupHome();
+})();
+</script>
+</body>
+</html>

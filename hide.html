@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>かくれんぼ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#a5d6a7">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: #a5d6a7; }
+  #scene { flex: 1; min-height: 0; position: relative; overflow: hidden; border-radius: 24px;
+    background: linear-gradient(180deg, #8fd3ff 0%, #c9ecff 45%, #7cb342 45%, #558b2f 100%); }
+  #scene img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .spot { position: absolute; width: 22%; aspect-ratio: 1; }
+  .spot .who { position: absolute; left: 10%; width: 80%; bottom: 40%; height: 70%; }
+  .spot .who img { width: 100%; height: 100%; object-fit: contain; }
+  .spot .bush { position: absolute; left: 0; right: 0; bottom: 0; height: var(--h, 55%); border-radius: 50% 50% 30% 30% / 60% 60% 30% 30%; background: var(--bush, #43a047); box-shadow: inset 0 -8px 0 rgba(0,0,0,.15); }
+  .spot.found .bush { opacity: .35; }
+  .spot.found .who { animation: bounce .6s; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🌳</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question"></div>
+  <div class="stars" id="stars"></div>
+  <div id="scene"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const scene = document.getElementById('scene');
+  const stars = document.getElementById('stars');
+  const question = document.getElementById('question');
+  const BUSHES = ['#43a047', '#2e7d32', '#66bb6a', '#8d6e63', '#ffb74d'];
+  const BG = ['forest', 'town'];
+  const state = { target: null, spots: [], busy: false, score: Baby.getLevel(), bg: 0 };
+
+  function ask() { say(`${state.target.item.name}は どこかな？`); }
+  function newRound() {
+    state.busy = false;
+    const n = state.score < 3 ? 3 : state.score < 8 ? 4 : 5;
+    const hideRatio = state.score < 5 ? 0.5 : 0.65;      // 慣れたら隠れる部分が増える
+    const items = shuffle(CATALOG.animals.items).slice(0, n).map(item => ({ set: CATALOG.animals, item }));
+    state.target = Baby.fresh('hide', () => pick(items), v => v.item.id);
+    scene.innerHTML = '';
+    // 背景（ChatGPT の絵があれば使う。無ければ空と草）
+    const bg = document.createElement('img'); bg.className = 'bg'; bg.alt = '';
+    bg.src = `assets/scenes/${BG[state.bg % BG.length]}.png`; bg.onerror = () => bg.remove();
+    scene.appendChild(bg);
+    state.bg++;
+    // 重ならない位置に配置
+    const used = [];
+    state.spots = items.map(p => {
+      let x, y, tries = 0;
+      do { x = 3 + Math.random() * 72; y = 25 + Math.random() * 60; tries++; } while (tries < 50 && used.some(u => Math.abs(u.x - x) < 24 && Math.abs(u.y - y) < 26));
+      used.push({ x, y });
+      const s = document.createElement('div'); s.className = 'spot'; s.dataset.id = p.item.id;
+      s.style.left = `${x}%`; s.style.top = `${y}%`;
+      s.style.setProperty('--bush', pick(BUSHES)); s.style.setProperty('--h', `${hideRatio * 100}%`);
+      s.innerHTML = `<div class="who"><img src="${p.set.dir}/${p.item.id}.png" alt=""></div><div class="bush"></div>`;
+      scene.appendChild(s);
+      return { el: s, p };
+    });
+    question.textContent = `${state.target.item.name}は どこ？`;
+    Baby.prime([`${state.target.item.name}！`, ...items.map(p => `それは ${p.item.name}。`)]);
+    ask();
+  }
+
+  scene.addEventListener('pointerdown', (e) => {
+    const s = e.target.closest('.spot');
+    if (!s || state.busy) return;
+    e.preventDefault();
+    const spot = state.spots.find(x => x.el === s);
+    burst(e.clientX, e.clientY, 5);
+    if (spot.p === state.target) {
+      state.busy = true;
+      s.classList.add('found');
+      SFX[spot.p.item.sfx] ? SFX[spot.p.item.sfx]() : SFX.pop();
+      setTimeout(() => SFX.correct(), 400);
+      state.score++; Baby.setLevel(state.score);
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      sayThen([Baby.praise(), 'みつけた！'], { delay: 600 }, () => {
+        if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
+      }, 700);
+    } else {
+      s.classList.add('found'); setTimeout(() => s.classList.remove('found'), 800);
+      SFX.wrong();
+      say([`それは ${spot.p.item.name}。`, `${state.target.item.name}は どこかな？`], { delay: 200 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>じゃんけん</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e8f5e9">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e8f5e9 0%, #f7fff8 100%); }
+  #cpu { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  #cpu .hand { font-size: min(30vmin, 150px); line-height: 1; }
+  #cpu .hand.shake { animation: shake .3s infinite; }
+  #cpu .name { font-size: 16px; color: #789; font-weight: bold; }
+  #res { font-size: min(9vw, 40px); font-weight: bold; color: #e65100; min-height: 48px; text-align: center; }
+  .choices { flex: 0.9; }
+  .choice { font-size: min(18vmin, 90px); line-height: 1; flex-direction: column; }
+  .choice small { font-size: 16px; color: #789; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">✊</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">じゃんけん ぽん！</div>
+  <div class="stars" id="stars"></div>
+  <div id="cpu"><div class="name">ずんだもん</div><div class="hand" id="cpuHand">🟢</div></div>
+  <div id="res"></div>
+  <div class="choices" id="choices">
+    <div class="choice" data-h="0">✊<small>ぐー</small></div>
+    <div class="choice" data-h="1">✌️<small>ちょき</small></div>
+    <div class="choice" data-h="2">✋<small>ぱー</small></div>
+  </div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, animate, celebrate, cheer, setupStart, setupHome } = Baby;
+  const HANDS = ['✊', '✌️', '✋'], NAMES = ['ぐー', 'ちょき', 'ぱー'];
+  const RULE = ['ぐーは ちょきに かつ', 'ちょきは ぱーに かつ', 'ぱーは ぐーに かつ'];
+  const cpuHand = document.getElementById('cpuHand');
+  const res = document.getElementById('res');
+  const stars = document.getElementById('stars');
+  const state = { busy: false, wins: Baby.getLevel() };
+
+  function ready() {
+    state.busy = false; cpuHand.textContent = '🟢'; cpuHand.classList.add('shake'); res.textContent = '';
+    say('じゃんけん ぽん！');
+  }
+  document.getElementById('choices').addEventListener('pointerdown', async (e) => {
+    const c = e.target.closest('.choice'); if (!c || state.busy) return;
+    e.preventDefault(); state.busy = true;
+    const me = Number(c.dataset.h), cpu = Math.floor(Math.random() * 3);
+    burst(e.clientX, e.clientY, 5);
+    cpuHand.classList.remove('shake'); cpuHand.textContent = HANDS[cpu];
+    say(`${NAMES[me]}と ${NAMES[cpu]}`);
+    await new Promise(r => setTimeout(r, 1300));
+    if (me === cpu) {
+      res.textContent = 'あいこ！'; SFX.flip();
+      await Baby.say('あいこ！ もういっかい');
+    } else if ((me + 1) % 3 === cpu) {          // ぐー(0) は ちょき(1) に勝つ
+      res.textContent = 'かった！'; SFX.correct(); cheer('🎉'); celebrate();
+      state.wins++; Baby.setLevel(state.wins);
+      stars.textContent = '⭐'.repeat(((state.wins - 1) % 5) + 1);
+      await Baby.say(['かった！ やったね', RULE[me]]);
+      if (state.wins % 5 === 0) await Baby.reward();
+    } else {
+      res.textContent = 'まけた…'; SFX.wrong();
+      await Baby.say(['まけた。 もういっかい！', RULE[cpu]]);
+    }
+    setTimeout(ready, 400);
+  });
+  setupStart(() => setTimeout(ready, 300));
+  setupHome();
+})();
+</script>
+</body>
+</html>
