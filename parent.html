@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#eceff1">
-<link rel="stylesheet" href="common.css?v=202609221429">
+<link rel="stylesheet" href="common.css?v=202609221433">
 <style>
   html, body { touch-action: pan-y; }
   body { background: #eceff1; color: #37474f; font-size: 15px; }
@@ -92,13 +92,17 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609221429"></script>
-<script src="games.js?v=202609221429"></script>
-<script src="catalog.js?v=202609221429"></script>
+<script src="common.js?v=202609221433"></script>
+<script src="games.js?v=202609221433"></script>
+<script src="catalog.js?v=202609221433"></script>
 <script>
 (() => {
   'use strict';
   const { load, save, holdButton, setupHome, SFX } = Baby;
+  // 🏠 は最初に配線する（下のどこかで失敗しても帰れるように）
+  setupHome();
+  // 各ブロックは独立させ、1つが失敗しても他が動くようにする
+  const guard = (name, fn) => { try { fn(); } catch (e) { console.error('[parent]', name, e); } };
 
   // ---- タイマー ----
   const timerBtns = document.getElementById('timerBtns');
@@ -126,13 +130,15 @@
   renderTimer();
   setInterval(renderTimer, 15000);
 
+  guard('log', () => {
   // ---- 記録 ----
   const d = load();
   const tbody = document.querySelector('#logTable tbody');
-  const rows = GAMES.filter(g => d.log[g.id] || (d.levels || {})[g.id]).sort((a, b) => (d.log[b.id].last || 0) - (d.log[a.id].last || 0));
-  if (!rows.length) tbody.innerHTML = '<tr><td colspan="5" class="note">まだ記録がありません</td></tr>';
+  d.log = d.log || {}; d.levels = d.levels || {}; d.stickers = d.stickers || []; d.settings = d.settings || {};
+  const rows = GAMES.filter(g => d.log[g.id] || d.levels[g.id]).sort((a, b) => ((d.log[b.id] || {}).last || 0) - ((d.log[a.id] || {}).last || 0));
+  if (!rows.length) tbody.innerHTML = '<tr><td colspan="6" class="note">まだ記録がありません</td></tr>';
   for (const g of rows) {
-    const l = d.log[g.id];
+    const l = d.log[g.id] || {};   // レベルだけ残っていて記録が無いこともある（きろく消去後）
     const c = l.correct || 0, w = l.wrong || 0;
     const rate = c + w ? Math.round(c / (c + w) * 100) : null;
     const tr = document.createElement('tr');
@@ -160,7 +166,11 @@
   const totalSec = Object.values(d.days || {}).reduce((a, b) => a + b, 0);
   document.getElementById('todayNote').textContent = `きょう: ${Math.round(todaySec / 60)} 分 ／ これまで: ${Math.round(totalSec / 60)} 分`;
 
+  });
+
+  guard('title', () => {
   // ---- タイトル ----
+  const d = load();
   const titleInput = document.getElementById('titleInput');
   titleInput.value = d.settings.title || '';
   document.getElementById('titleSave').addEventListener('click', () => {
@@ -168,6 +178,9 @@
     document.getElementById('titleSave').textContent = 'ほぞんした';
   });
 
+  });
+
+  guard('download', () => {
   // ---- ぜんぶダウンロード（Service Worker のキャッシュに入れる） ----
   document.getElementById('dlAll').addEventListener('click', async () => {
     const st = document.getElementById('dlState'), bar = document.getElementById('dlBar');
@@ -187,7 +200,11 @@
     SFX.correct();
   });
 
+  });
+
+  guard('toggles', () => {
   // ---- ゲームのオン/オフ ----
+  const d = load();
   const toggles = document.getElementById('toggles');
   for (const g of GAMES) {
     const l = document.createElement('label'); l.className = 'game';
@@ -203,6 +220,9 @@
     toggles.appendChild(l);
   }
 
+  });
+
+  guard('wipe', () => {
   // ---- データ消去 ----
   // 何を消すかを明示: きろく＝回数・時間・正解率、レベル＝到達度と「レベルアップ済み」の記録、シール＝シールと「全部集めた」記録
   const wipe = { log: (dd) => { dd.log = {}; dd.days = {}; }, level: (dd) => { dd.levels = {}; dd.seenLevel = {}; }, sticker: (dd) => { dd.stickers = []; delete dd.completed; } };
@@ -212,7 +232,7 @@
   holdButton(document.getElementById('clearSticker'), () => doWipe('sticker'), 1500);
   holdButton(document.getElementById('clearAll'), () => doWipe('log', 'level', 'sticker'), 1500);
 
-  setupHome();
+  });
 })();
 </script>
 </body>
