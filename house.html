@@ -8,24 +8,18 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e8f5e9">
-<link rel="stylesheet" href="common.css?v=202609222102">
-<link rel="stylesheet" href="game.css?v=202609222102">
+<link rel="stylesheet" href="common.css?v=202609222111">
+<link rel="stylesheet" href="game.css?v=202609222111">
 <style>
   body { background: linear-gradient(180deg, #e8f5e9 0%, #ffffff 100%); }
 
   #scene { flex: 1.2; min-height: 0; position: relative; border-radius: 28px; background: linear-gradient(180deg, #b3e5fc 0%, #e1f5fe 62%, #a5d6a7 62%, #81c784 100%); overflow: hidden; }
   .part { position: absolute; display: flex; align-items: center; justify-content: center; }
-  .part img { width: 100%; height: 100%; object-fit: contain; } .part.emoji { font-size: min(10vmin, 48px); }
+  .part img { width: 100%; height: auto; display: block; } .part.emoji { font-size: min(10vmin, 48px); }
   .part.pop { animation: pop .3s; } @keyframes pop { 0% { transform: scale(0.5); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
   /* 正方形の「しきち」の中に％で置く（画面の縦横比が変わっても崩れない） */
   #lot { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 300px; height: 300px; }
-  #wall { left: 30%; bottom: 14%; width: 40%; height: 32%; }
-  #roof { left: 22%; bottom: 44%; width: 56%; height: 24%; }
-  #door { left: 44.5%; bottom: 14%; width: 11%; height: 17%; }
-  #winL { left: 33%; bottom: 31%; width: 9%; height: 9%; } #winR { left: 58%; bottom: 31%; width: 9%; height: 9%; }
-  #chimney { left: 60%; bottom: 60%; width: 9%; height: 13%; }
-  #tree { left: 2%; bottom: 12%; width: 24%; height: 36%; } #flower { left: 78%; bottom: 12%; width: 16%; height: 16%; }
-  #sun { left: 2%; top: 3%; width: 18%; height: 18%; } #cloud { left: 72%; top: 6%; width: 22%; height: 12%; }
+  /* 各パーツの位置は JS の layout() が絵の縦横比から計算する */
   #palette { height: min(30vh, 190px); overflow-y: auto; touch-action: pan-y; display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
   .pal { aspect-ratio: 1; border-radius: 14px; background: var(--card); box-shadow: 0 4px 0 rgba(0,0,0,.08); display: flex; align-items: center; justify-content: center; }
   .pal.on { background: #fff6b3; box-shadow: 0 0 0 3px #ffd84d; }
@@ -39,7 +33,7 @@
 <div id="start"><div class="big">🏠</div><div>タッチしてね</div></div>
 
 <div id="stage">
-  <div class="question" id="question">パーツを えらんで おうちを つくろう</div>
+  <div class="question" id="question">おうちを つくろう</div>
   <div class="stars" id="stars"></div>
   <div id="scene"><div id="lot"></div></div>
   <div id="palette"></div>
@@ -48,8 +42,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609222102"></script>
-<script src="catalog.js?v=202609222102"></script>
+<script src="common.js?v=202609222111"></script>
+<script src="catalog.js?v=202609222111"></script>
 <script>
 (() => {
   'use strict';
@@ -62,7 +56,28 @@
     ['chimney', 'chimney', '🧱', 'えんとつ'], ['tree', 'tree', '🌳', 'き'], ['flower', 'flower', '🌷', 'おはな'], ['sun', 'sun', '☀️', 'おひさま'], ['cloud', 'cloud', '☁️', 'くも'],
   ];
   const scene = document.getElementById('scene'), lot = document.getElementById('lot'), palette = document.getElementById('palette');
-  const fit = () => { const s = Math.floor(Math.min(scene.clientWidth, scene.clientHeight)); lot.style.width = lot.style.height = `${s}px`; };
+  const fit = () => { const s = Math.floor(Math.min(scene.clientWidth, scene.clientHeight)); lot.style.width = lot.style.height = `${s}px`; layout(); };
+  // 絵の縦横比（高さ÷幅）。読み込み前は 1
+  const aspect = (id) => { const im = document.querySelector(`#${id} img`); return im && im.naturalWidth ? im.naturalHeight / im.naturalWidth : 1; };
+  // パーツを積み上げる: かべを土台に、やねは かべの上端、まどは かべの中、えんとつは やねの途中から
+  function layout() {
+    const S = lot.clientWidth; if (!S) return;
+    const set = (id, w, left, bottom, top) => {
+      const el = document.getElementById(id); if (!el) return 0;
+      el.style.width = `${w}px`; el.style.left = `${left}px`;
+      if (top != null) { el.style.top = `${top}px`; el.style.bottom = ''; } else { el.style.bottom = `${bottom}px`; el.style.top = ''; }
+      return w * aspect(id);
+    };
+    const ground = 0.16 * S;
+    const wallW = 0.42 * S, wallH = set('wall', wallW, 0.29 * S, ground) || wallW;
+    const roofW = 0.58 * S; set('roof', roofW, 0.21 * S, ground + wallH - 0.015 * S);
+    const roofH = roofW * aspect('roof');
+    set('door', 0.12 * S, 0.44 * S, ground + 0.01 * S);
+    set('winL', 0.10 * S, 0.335 * S, ground + wallH * 0.52); set('winR', 0.10 * S, 0.565 * S, ground + wallH * 0.52);
+    set('chimney', 0.08 * S, 0.60 * S, ground + wallH + roofH * 0.3);
+    set('tree', 0.22 * S, 0.03 * S, ground - 0.04 * S); set('flower', 0.11 * S, 0.83 * S, ground - 0.03 * S);
+    set('sun', 0.15 * S, 0.03 * S, null, 0.03 * S); set('cloud', 0.20 * S, 0.74 * S, null, 0.07 * S);
+  }
   new ResizeObserver(fit).observe(scene); fit();
   const stars = document.getElementById('stars');
   const state = { busy: false, chosen: {}, score: Baby.getLevel() };
@@ -79,10 +94,11 @@
       let el = document.getElementById(id);
       if (!el) { el = document.createElement('div'); el.id = id; el.className = 'part'; lot.appendChild(el); }
       el.innerHTML = ''; el.classList.remove('emoji');
-      const im = new Image(); im.src = `assets/house/${name}.png`; im.alt = ''; im.onerror = () => { el.textContent = emoji; el.classList.add('emoji'); };
+      const im = new Image(); im.src = `assets/house/${name}.png`; im.alt = ''; im.onload = layout; im.onerror = () => { el.textContent = emoji; el.classList.add('emoji'); };
       el.appendChild(im); animate(el, 'pop', 300);
     }
     state.chosen[kind] = name;
+    layout();
     palette.querySelectorAll('.pal').forEach(x => { const p = PARTS[Number(x.dataset.i)]; if (p[0] === kind) x.classList.toggle('on', p[1] === name); });
   }
   function reset() {

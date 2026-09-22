@@ -8,18 +8,17 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#eceff1">
-<link rel="stylesheet" href="common.css?v=202609222102">
-<link rel="stylesheet" href="game.css?v=202609222102">
+<link rel="stylesheet" href="common.css?v=202609222111">
+<link rel="stylesheet" href="game.css?v=202609222111">
 <style>
   body { background: linear-gradient(180deg, #eceff1 0%, #ffffff 100%); }
 
   #stand { flex: 1.2; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
-  #bot { position: relative; height: 92%; aspect-ratio: 3 / 4; }
+  #bot { position: relative; width: 200px; height: 260px; }   /* 大きさは JS の layoutBot() が決める */
   .rp { position: absolute; display: flex; align-items: center; justify-content: center; }
-  .rp img { width: 100%; height: 100%; object-fit: contain; } .rp.emoji { font-size: min(9vmin, 44px); }
-  #head { left: 25%; top: 0; width: 50%; height: 30%; } #body { left: 20%; top: 28%; width: 60%; height: 40%; }
-  #armL { left: -6%; top: 30%; width: 28%; height: 36%; } #armR { right: -6%; top: 30%; width: 28%; height: 36%; transform: scaleX(-1); }
-  #legs { left: 20%; top: 66%; width: 60%; height: 34%; }
+  .rp img { width: 100%; height: auto; display: block; } .rp.emoji { font-size: min(9vmin, 44px); }
+  #armR { transform: scaleX(-1); }
+  #head { z-index: 2; } #body { z-index: 1; } #legs { z-index: 0; }
   #bot.dance { animation: dance .5s ease-in-out 6; } @keyframes dance { 0%, 100% { transform: rotate(0) translateY(0); } 25% { transform: rotate(-6deg) translateY(-6%); } 75% { transform: rotate(6deg) translateY(-6%); } }
   #palette { height: min(30vh, 200px); display: grid; grid-template-rows: repeat(4, 1fr); gap: 6px; }
   .prow { display: grid; grid-template-columns: 64px repeat(3, 1fr); gap: 6px; min-height: 0; }
@@ -36,7 +35,7 @@
 <div id="start"><div class="big">🤖</div><div>タッチしてね</div></div>
 
 <div id="stage">
-  <div class="question" id="question">パーツを えらんで ロボットを つくろう</div>
+  <div class="question" id="question">ロボットを つくろう</div>
   <div class="stars" id="stars"></div>
   <div id="stand"><div id="bot"><div class="rp" id="head"></div><div class="rp" id="armL"></div><div class="rp" id="armR"></div><div class="rp" id="body"></div><div class="rp" id="legs"></div></div></div>
   <div id="palette"></div>
@@ -45,15 +44,33 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609222102"></script>
-<script src="catalog.js?v=202609222102"></script>
+<script src="common.js?v=202609222111"></script>
+<script src="catalog.js?v=202609222111"></script>
 <script>
 (() => {
   'use strict';
 
   const { SFX, say, burst, animate, cheer, celebrate, setupStart, setupHome, tone } = Baby;
   const KINDS = [['head', 'あたま', '🤖'], ['body', 'からだ', '📦'], ['arm', 'うで', '🦾'], ['legs', 'あし', '🦿']];
-  const palette = document.getElementById('palette'), bot = document.getElementById('bot');
+  const palette = document.getElementById('palette'), bot = document.getElementById('bot'), stand = document.getElementById('stand');
+  const aspect = (id) => { const im = document.querySelector(`#${id} img`); return im && im.naturalWidth ? im.naturalHeight / im.naturalWidth : 1; };
+  // パーツを積み上げる（B = ロボットの幅）。あたまの下にからだ、からだの肩にうで、からだの下にあし
+  function layoutBot() {
+    const W = stand.clientWidth, H = stand.clientHeight; if (!W || !H) return;
+    const hw = 0.42, bw = 0.56, aw = 0.20, lw = 0.50;
+    const hH = hw * aspect('head'), bH = bw * aspect('body'), lH = lw * aspect('legs');
+    const total = hH + bH + lH - 0.05;
+    const B = Math.min(W * 0.9, H * 0.94 / total);
+    bot.style.width = `${B}px`; bot.style.height = `${total * B}px`;
+    const put = (id, w, left, top) => { const el = document.getElementById(id); el.style.width = `${w * B}px`; el.style.left = `${left * B}px`; el.style.top = `${top * B}px`; };
+    put('head', hw, (1 - hw) / 2, 0);
+    const bodyTop = hH - 0.03;
+    put('body', bw, (1 - bw) / 2, bodyTop);
+    put('armL', aw, (1 - bw) / 2 - aw + 0.05, bodyTop + 0.04);
+    put('armR', aw, (1 + bw) / 2 - 0.05, bodyTop + 0.04);
+    put('legs', lw, (1 - lw) / 2, bodyTop + bH - 0.02);
+  }
+  new ResizeObserver(layoutBot).observe(stand);
   const stars = document.getElementById('stars');
   const state = { busy: false, chosen: {}, score: Baby.getLevel() };
 
@@ -72,16 +89,18 @@
     const ids = k === 'arm' ? ['armL', 'armR'] : [k];
     for (const id of ids) {
       const el = document.getElementById(id); el.innerHTML = ''; el.classList.remove('emoji');
-      const im = new Image(); im.src = `assets/robot/${k}${i}.png`; im.alt = ''; im.onerror = () => { el.textContent = emoji; el.classList.add('emoji'); };
+      const im = new Image(); im.src = `assets/robot/${k}${i}.png`; im.alt = ''; im.onload = layoutBot; im.onerror = () => { el.textContent = emoji; el.classList.add('emoji'); };
       el.appendChild(im); animate(el, 'pop', 300);
     }
     state.chosen[k] = i;
+    layoutBot();
     palette.querySelectorAll(`.pal[data-k="${k}"]`).forEach(x => x.classList.toggle('on', Number(x.dataset.i) === i));
     tone({ type: 'square', f0: 300 + i * 150, f1: 500 + i * 150, dur: 0.12, gain: 0.12, lowpass: 2500 });
   }
   function reset() {
     state.busy = false; state.chosen = {}; bot.classList.remove('dance');
     ['head', 'body', 'armL', 'armR', 'legs'].forEach(id => { document.getElementById(id).innerHTML = ''; });
+    layoutBot();
     palette.querySelectorAll('.pal').forEach(x => x.classList.remove('on'));
     say('パーツを えらんで ロボットを つくろう');
   }
