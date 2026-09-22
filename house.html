@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e8f5e9">
-<link rel="stylesheet" href="common.css?v=202609222111">
-<link rel="stylesheet" href="game.css?v=202609222111">
+<link rel="stylesheet" href="common.css?v=202609222116">
+<link rel="stylesheet" href="game.css?v=202609222116">
 <style>
   body { background: linear-gradient(180deg, #e8f5e9 0%, #ffffff 100%); }
 
@@ -42,8 +42,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609222111"></script>
-<script src="catalog.js?v=202609222111"></script>
+<script src="common.js?v=202609222116"></script>
+<script src="catalog.js?v=202609222116"></script>
 <script>
 (() => {
   'use strict';
@@ -87,14 +87,14 @@
     stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
     return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
   }
-  PARTS.forEach((p, i) => { const d = document.createElement('div'); d.className = 'pal'; d.dataset.i = i; d.appendChild(Baby.pic(`assets/house/${p[1]}.png`, p[2])); palette.appendChild(d); });
+  PARTS.forEach((p, i) => { const d = document.createElement('div'); d.className = 'pal'; d.dataset.i = i; d.appendChild(Baby.pic(`assets/house/${p[1]}.png?v=2`, p[2])); palette.appendChild(d); });
   function place(kind, name, emoji) {
     const ids = kind === 'win' ? ['winL', 'winR'] : [kind];
     for (const id of ids) {
       let el = document.getElementById(id);
       if (!el) { el = document.createElement('div'); el.id = id; el.className = 'part'; lot.appendChild(el); }
       el.innerHTML = ''; el.classList.remove('emoji');
-      const im = new Image(); im.src = `assets/house/${name}.png`; im.alt = ''; im.onload = layout; im.onerror = () => { el.textContent = emoji; el.classList.add('emoji'); };
+      const im = new Image(); im.src = `assets/house/${name}.png?v=2`; im.alt = ''; im.onload = layout; im.onerror = () => { el.textContent = emoji; el.classList.add('emoji'); };
       el.appendChild(im); animate(el, 'pop', 300);
     }
     state.chosen[kind] = name;

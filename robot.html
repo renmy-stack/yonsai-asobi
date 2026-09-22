@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#eceff1">
-<link rel="stylesheet" href="common.css?v=202609222111">
-<link rel="stylesheet" href="game.css?v=202609222111">
+<link rel="stylesheet" href="common.css?v=202609222116">
+<link rel="stylesheet" href="game.css?v=202609222116">
 <style>
   body { background: linear-gradient(180deg, #eceff1 0%, #ffffff 100%); }
 
@@ -44,8 +44,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609222111"></script>
-<script src="catalog.js?v=202609222111"></script>
+<script src="common.js?v=202609222116"></script>
+<script src="catalog.js?v=202609222116"></script>
 <script>
 (() => {
   'use strict';
@@ -82,14 +82,14 @@
   for (const [k, label, emoji] of KINDS) {
     const row = document.createElement('div'); row.className = 'prow';
     const lab = document.createElement('div'); lab.className = 'lab'; lab.textContent = label; row.appendChild(lab);
-    for (let i = 1; i <= 3; i++) { const d = document.createElement('div'); d.className = 'pal'; d.dataset.k = k; d.dataset.i = i; d.appendChild(Baby.pic(`assets/robot/${k}${i}.png`, emoji)); row.appendChild(d); }
+    for (let i = 1; i <= 3; i++) { const d = document.createElement('div'); d.className = 'pal'; d.dataset.k = k; d.dataset.i = i; d.appendChild(Baby.pic(`assets/robot/${k}${i}.png?v=2`, emoji)); row.appendChild(d); }
     palette.appendChild(row);
   }
   function put(k, i, emoji) {
     const ids = k === 'arm' ? ['armL', 'armR'] : [k];
     for (const id of ids) {
       const el = document.getElementById(id); el.innerHTML = ''; el.classList.remove('emoji');
-      const im = new Image(); im.src = `assets/robot/${k}${i}.png`; im.alt = ''; im.onload = layoutBot; im.onerror = () => { el.textContent = emoji; el.classList.add('emoji'); };
+      const im = new Image(); im.src = `assets/robot/${k}${i}.png?v=2`; im.alt = ''; im.onload = layoutBot; im.onerror = () => { el.textContent = emoji; el.classList.add('emoji'); };
       el.appendChild(im); animate(el, 'pop', 300);
     }
     state.chosen[k] = i;
