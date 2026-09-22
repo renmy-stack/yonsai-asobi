@@ -80,7 +80,15 @@
 5. `say()` は言い終わると resolve する Promise を返す。次の問題へ進むときは `sayThen(text, opts, fn)` を使い、声が途中で切れないようにする
 6. クレジット: 「VOICEVOX:ずんだもん」（公開するときは表記が必要）
 
-## iPhone で試す手順
+## 公開先（GitHub Pages）
+
+- URL: **https://renmy-stack.github.io/yonsai-asobi/**
+- リポジトリ: https://github.com/renmy-stack/yonsai-asobi （このフォルダ `app/` がリポジトリのルート）
+- 更新の反映: このフォルダで `git add -A && git commit -m "..." && git push` すると1〜2分で公開に反映される
+- https なので Service Worker が有効になり、一度開けばオフラインでも遊べる
+- 生成元のシート画像（`_sheet*.png`）は `.gitignore` で除外している
+
+## iPhone で試す手順（ローカルで試すとき）
 
 1. PC と iPhone を同じ Wi-Fi につなぐ
 2. PC でプロジェクトルート（このフォルダの1つ上）で次を実行
