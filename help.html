@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#f1f8e9">
-<link rel="stylesheet" href="common.css">
-<link rel="stylesheet" href="game.css">
+<link rel="stylesheet" href="common.css?v=202609221752">
+<link rel="stylesheet" href="game.css?v=202609221752">
 <style>
   body { background: linear-gradient(180deg, #f1f8e9 0%, #ffffff 100%); }
 
@@ -42,8 +42,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js"></script>
-<script src="catalog.js"></script>
+<script src="common.js?v=202609221752"></script>
+<script src="catalog.js?v=202609221752"></script>
 <script>
 (() => {
   'use strict';
@@ -51,7 +51,7 @@
   const { SFX, say, burst, celebrate, cheer, animate, setupStart, setupHome, shuffle, pick } = Baby;
   const ITEMS = [
     ['assets/life/plate.png', 'おさら', '🍽️', 'sink'], ['assets/life/cup.png', 'コップ', '🥛', 'sink'], ['assets/life/bowl.png', 'おわん', '🍚', 'sink'], ['assets/words/supuun.png', 'スプーン', '🥄', 'sink'],
-    ['assets/life/peel.png', 'バナナの かわ', '🍌', 'trash'], ['assets/life/wrapper.png', 'おかしの ふくろ', '🍬', 'trash'], ['assets/life/paper.png', 'かみくず', '🗑️', 'trash'],
+    ['assets/life/peel.png', 'バナナの かわ', '🍌', 'trash'], ['assets/life/paper.png', 'かみくず', '🗑️', 'trash'],
     ['assets/words/booru.png', 'ボール', '⚽', 'toy'], ['assets/life/blocks.png', 'つみき', '🧱', 'toy'], ['assets/words/kuma.png', 'くまさん', '🧸', 'toy'],
   ];
   const BOX = { sink: ['assets/life/sink.png', '🚰', 'ながしに かたづけた！'], trash: ['assets/life/trash.png', '🗑️', 'ゴミばこに かたづけた！'], toy: ['assets/life/toybox.png', '📦', 'おもちゃばこに かたづけた！'] };
