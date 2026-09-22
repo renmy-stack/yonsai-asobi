@@ -64,12 +64,12 @@
   const hint = document.getElementById('hint');
   const stars = document.getElementById('stars');
   const question = document.getElementById('question');
-  const state = { n: 2, order: [], sel: null, busy: false, cleared: 0, pic: null };
+  const state = { n: 2, order: [], sel: null, busy: false, cleared: Baby.getLevel(), pic: null };
 
   function newRound() {
     state.busy = false; state.sel = null;
     // 2回クリアするごとに 2x2 → 3x3 → 4x4
-    state.n = Math.min(4, 2 + Math.floor(state.cleared / 2));
+    state.n = Math.min(3, 2 + Math.floor(state.cleared / 2));   // 4歳には 3x3 まで
     const n = state.n, total = n * n;
     state.pic = Baby.fresh('puzzle', () => pick(allItems()), v => v.item.id);
     const src = `${state.pic.set.dir}/${state.pic.item.id}.png`;
@@ -107,7 +107,7 @@
     if (state.order.every((v, i) => v === i)) {
       state.busy = true;
       board.classList.add('solved');
-      state.cleared++;
+      state.cleared++; Baby.setLevel(state.cleared);
       stars.textContent = '⭐'.repeat(((state.cleared - 1) % 5) + 1);
       setTimeout(() => { SFX.fanfare(); cheer('🎉'); celebrate(); Baby.say(['できた！', `${state.pic.item.name}だ！`], { delay: 300 }).then(() => Baby.reward()).then(newRound); }, 300);
     }

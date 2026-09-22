@@ -50,7 +50,7 @@
     { key: 'many',  q: 'おおいのは どっち？',   pickAns: (a, b) => a.count > b.count },
     { key: 'few',   q: 'すくないのは どっち？', pickAns: (a, b) => a.count < b.count },
   ];
-  const state = { kind: null, sides: [], answer: 0, busy: false, score: 0 };
+  const state = { kind: null, sides: [], answer: 0, busy: false, score: Baby.getLevel() };
 
   function ask() { say(state.kind.q); }
 
@@ -85,6 +85,7 @@
     }
     state.answer = state.kind.pickAns(state.sides[0], state.sides[1]) ? 0 : 1;
     question.textContent = state.kind.q;
+    Baby.prime(['こっちが', 'おおきい！', 'ちいさい！', ...state.sides.map(s => s.count != null ? `${countWord(state.item, s.count)}！` : null).filter(Boolean)]);
     ask();
   }
 
@@ -98,7 +99,7 @@
       state.busy = true;
       animate(c, 'glow', 900);
       SFX.correct();
-      state.score++;
+      state.score++; Baby.setLevel(state.score);
       stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
       const s = state.sides[i];
       // 助数詞はものに合わせる（いぬ→さんびき、くるま→さんだい、りんご→さんこ）
@@ -107,7 +108,7 @@
         if (state.score % 5 === 0) Baby.reward().then(newRound);
         else newRound();
       };
-      sayThen(['せいかい！', 'こっちが', `${word}！`], { delay: 300 }, done, 700);
+      sayThen([Baby.praise(), 'こっちが', `${word}！`], { delay: 300 }, done, 700);
     } else {
       animate(c, 'shake', 400);
       SFX.wrong();
@@ -115,7 +116,7 @@
     }
   });
 
-  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
   setupStart(() => setTimeout(newRound, 400));
   setupHome();
 })();

@@ -137,6 +137,7 @@
       numbers.appendChild(b);
     }
     question.textContent = `${state.item.name}は ${COUNTERS[state.item.counter].q}？`;
+    Baby.prime([`${state.item.name}は`, `${countWord(state.item, state.n)}！`, `${state.item.name}を`, 'タッチして かぞえてみよう']);
     ask();
   }
 
@@ -166,9 +167,9 @@
       SFX.correct();
       cheer('🎉');
       celebrate(e.clientX, e.clientY);
-      state.score = (state.score || 0) + 1;
+      state.score = (state.score || Baby.getLevel()) + 1; Baby.setLevel(state.score);
       // 言い終わってから次へ（途中で切れないように）
-      sayThen(['せいかい！', `${state.item.name}は`, `${countWord(state.item, state.n)}！`], { delay: 300 }, () => { if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound(); }, 800);
+      sayThen([Baby.praise(), `${state.item.name}は`, `${countWord(state.item, state.n)}！`], { delay: 300 }, () => { if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound(); }, 800);
     } else {
       animate(b, 'shake', 400);
       SFX.wrong();
@@ -176,7 +177,7 @@
     }
   });
 
-  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
 
   setupStart(() => setTimeout(newRound, 600));
   setupHome();

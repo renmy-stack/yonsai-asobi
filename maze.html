@@ -39,7 +39,7 @@
   const ctx = cv.getContext('2d');
   const wrap = document.getElementById('wrap');
   const stars = document.getElementById('stars');
-  const state = { n: 5, walls: null, pos: null, trail: [], done: false, score: 0, hero: null, goal: null, imgs: {} };
+  const state = { n: 5, walls: null, pos: null, trail: [], done: false, score: Baby.getLevel(), hero: null, goal: null, imgs: {} };
   const SIZE = 720;   // 描画は固定サイズ。CSS で縮める
   cv.width = SIZE; cv.height = SIZE;
 
@@ -131,7 +131,7 @@
     draw();
     if (tx === state.n - 1 && ty === state.n - 1) {
       state.done = true;
-      state.score++;
+      state.score++; Baby.setLevel(state.score);
       stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
       SFX.correct(); cheer('🎉'); celebrate();
       Baby.say('ゴール！ やったね！', { delay: 300 }).then(() => state.score % 5 === 0 ? Baby.reward() : null).then(() => setTimeout(newRound, 600));

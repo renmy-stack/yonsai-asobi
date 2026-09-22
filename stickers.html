@@ -28,6 +28,7 @@
   }
   .slot img { width: 84%; height: 84%; object-fit: contain; }
   .slot.empty { background: rgba(255,255,255,.35); box-shadow: inset 0 0 0 3px rgba(0,0,0,.08); }
+  .slot.rare { box-shadow: 0 0 0 4px #ffc107, 0 4px 0 rgba(0,0,0,.08); background: #fff8dc; }
   .slot.empty::after { content: '？'; font-size: 34px; color: rgba(0,0,0,.18); font-weight: bold; }
   .slot .n {
     position: absolute; right: 4px; bottom: 4px;
@@ -57,7 +58,7 @@
   const book = document.getElementById('book');
   const d = load();
   const total = d.stickers.length;
-  document.getElementById('count').textContent = total ? `ぜんぶで ${total} まい` : '';
+  document.getElementById('count').textContent = total ? `ぜんぶで ${total} まい（${new Set(d.stickers.map(s => s.id)).size} / ${Baby.STICKERS.length} しゅるい）` : '';
 
   // 名前をひく（どうぶつなどは catalog、それ以外は固定）
   const NAMES = { 'icons/trophy': 'トロフィー', 'icons/mascot': 'わんちゃん' };
@@ -72,12 +73,12 @@
   }
   for (const [id, n] of counts) {
     const el = document.createElement('div');
-    el.className = 'slot'; el.dataset.id = id;
+    el.className = 'slot' + (Baby.RARE.includes(id) ? ' rare' : ''); el.dataset.id = id;
     el.innerHTML = `<img src="assets/${id}.png" alt="">` + (n > 1 ? `<span class="n">×${n}</span>` : '');
     book.appendChild(el);
   }
   // まだ持っていない分は「？」で
-  const ALL = 26;
+  const ALL = Baby.STICKERS.length;
   for (let i = counts.size; i < ALL; i++) {
     const el = document.createElement('div'); el.className = 'slot empty'; book.appendChild(el);
   }

@@ -37,7 +37,7 @@
   const stars = document.getElementById('stars');
   const choices = document.getElementById('choices');
   const SETS = Object.values(CATALOG);
-  const state = { set: null, target: null, busy: false, score: 0, round: 0 };
+  const state = { set: null, target: null, busy: false, score: Baby.getLevel(), round: 0 };
 
   function ask() { say(`${state.target.item.name}は どこかな？`); }
 
@@ -55,6 +55,7 @@
       choices.appendChild(c);
     }
     state.pool = pool;
+    Baby.prime(pool.map(p => [`それは ${p.item.name}。`, `${p.item.name}は どこかな？`]).flat());
     nextQuestion();
   }
 
@@ -78,12 +79,12 @@
       state.busy = true;
       animate(c, 'glow', 900);
       setTimeout(() => SFX.correct(), 350);
-      state.score++;
+      state.score++; Baby.setLevel(state.score);
       stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
       if (state.score % 5 === 0) {
         setTimeout(() => { Baby.say('ごもん せいかい！ すごい！', { delay: 100 }).then(() => Baby.reward()).then(newBoard); }, 400);
       } else {
-        Baby.sayThen('せいかい！', { delay: 300 }, nextQuestion, 500);
+        Baby.sayThen(Baby.praise(), { delay: 300 }, nextQuestion, 500);
       }
     } else {
       SFX.wrong();

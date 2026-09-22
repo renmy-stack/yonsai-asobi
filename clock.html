@@ -58,7 +58,7 @@
   const hourHand = document.getElementById('hour'), minHand = document.getElementById('minute');
   const choices = document.getElementById('choices');
   const stars = document.getElementById('stars');
-  const state = { h: 0, half: false, opts: [], busy: false, score: 0 };
+  const state = { h: 0, half: false, opts: [], busy: false, score: Baby.getLevel() };
 
   function setHands(h, half) {
     const ha = ((h % 12) / 12 + (half ? 1 / 24 : 0)) * 360;
@@ -77,6 +77,7 @@
     const set = new Set([state.h]);
     while (set.size < 3) set.add(1 + Math.floor(Math.random() * 12));
     state.opts = shuffle([...set]);
+    Baby.prime([`${read(state.h, state.half)}！`, 'ちがうよ。', 'あかい みじかい はりを みてね']);
     choices.innerHTML = '';
     for (const h of state.opts) {
       const c = document.createElement('div');
@@ -96,9 +97,9 @@
       state.busy = true;
       animate(c, 'glow', 900);
       SFX.correct();
-      state.score++;
+      state.score++; Baby.setLevel(state.score);
       stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
-      sayThen(['せいかい！', `${read(state.h, state.half)}！`], { delay: 300 }, () => {
+      sayThen([Baby.praise(), `${read(state.h, state.half)}！`], { delay: 300 }, () => {
         if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
       }, 600);
     } else {
@@ -108,7 +109,7 @@
     }
   });
 
-  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
   setupStart(() => setTimeout(newRound, 400));
   setupHome();
 })();

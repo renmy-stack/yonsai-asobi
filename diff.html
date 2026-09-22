@@ -47,7 +47,7 @@
   const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
   const bA = document.getElementById('bA'), bB = document.getElementById('bB');
   const stars = document.getElementById('stars');
-  const state = { diff: -1, busy: false, score: 0 };
+  const state = { diff: -1, busy: false, score: Baby.getLevel() };
 
   function ask() { say('ちがう ところは どこかな？'); }
   function newRound() {
@@ -71,6 +71,7 @@
         board.appendChild(c);
       });
     }
+    Baby.prime(['ここが ちがうね', 'そこは おなじだよ']);
     ask();
   }
 
@@ -83,9 +84,9 @@
       state.busy = true;
       [bA, bB].forEach(b => b.children[state.diff].classList.add('found'));
       SFX.correct();
-      state.score++;
+      state.score++; Baby.setLevel(state.score);
       stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
-      sayThen(['せいかい！', 'ここが ちがうね'], { delay: 300 }, () => {
+      sayThen([Baby.praise(), 'ここが ちがうね'], { delay: 300 }, () => {
         if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
       }, 700);
     } else {
@@ -95,7 +96,7 @@
     }
   });
 
-  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
   setupStart(() => setTimeout(newRound, 400));
   setupHome();
 })();

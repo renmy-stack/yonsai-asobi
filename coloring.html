@@ -12,9 +12,9 @@
 <style>
   body { background: linear-gradient(180deg, #fff3e0 0%, #fffaf3 100%); }
   #stage { display: flex; flex-direction: column; gap: 8px; }
-  #pics { display: flex; gap: 8px; justify-content: center; }
+  #pics { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
   .pic {
-    width: 52px; height: 52px; border-radius: 12px; background: #fff;
+    width: 44px; height: 44px; border-radius: 12px; background: #fff;
     box-shadow: 0 3px 0 rgba(0,0,0,.12); padding: 4px;
   }
   .pic img { width: 100%; height: 100%; object-fit: contain; }
@@ -62,6 +62,8 @@
   const PICS = [
     { id: 'dog', name: 'いぬ' }, { id: 'car', name: 'くるま' }, { id: 'apple', name: 'りんご' },
     { id: 'fish', name: 'さかな' }, { id: 'house', name: 'おうち' }, { id: 'flower', name: 'おはな' },
+    { id: 'train', name: 'でんしゃ' }, { id: 'cat', name: 'ねこ' }, { id: 'butterfly', name: 'ちょうちょ' },
+    { id: 'icecream', name: 'アイス' }, { id: 'rocket', name: 'ロケット' }, { id: 'rabbit', name: 'うさぎ' },
   ];
   const PALETTE = ['#ff5252', '#ff9800', '#ffeb3b', '#8bc34a', '#29b6f6', '#7e57c2', '#f48fb1', '#8d6e63', '#ffffff'];
   const cv = document.getElementById('cv');

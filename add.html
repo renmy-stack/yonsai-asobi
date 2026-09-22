@@ -66,7 +66,7 @@
   const numbers = document.getElementById('numbers');
   const question = document.getElementById('question');
   const stars = document.getElementById('stars');
-  const state = { a: 0, b: 0, item: null, set: null, counted: 0, busy: false, score: 0 };
+  const state = { a: 0, b: 0, item: null, set: null, counted: 0, busy: false, score: Baby.getLevel() };
   const cw = (n) => countWord(state.item, n);
 
   function ask() {
@@ -99,6 +99,7 @@
       numbers.appendChild(b);
     }
     question.textContent = `${state.a} ＋ ${state.b} は？`;
+    Baby.prime(['あわせて', `${cw(state.a + state.b)}！`, 'ぜんぶ タッチして かぞえてみよう']);
     ask();
   }
 
@@ -126,9 +127,9 @@
       b.classList.add('ok');
       ans.textContent = v; ans.classList.add('ok');
       SFX.correct(); cheer('🎉'); celebrate(e.clientX, e.clientY);
-      state.score++;
+      state.score++; Baby.setLevel(state.score);
       stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
-      sayThen(['せいかい！', 'あわせて', `${cw(v)}！`], { delay: 300 }, () => {
+      sayThen([Baby.praise(), 'あわせて', `${cw(v)}！`], { delay: 300 }, () => {
         if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
       }, 800);
     } else {
@@ -138,7 +139,7 @@
     }
   });
 
-  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
   setupStart(() => setTimeout(newRound, 500));
   setupHome();
 })();

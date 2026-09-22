@@ -51,7 +51,7 @@
   const sample = document.getElementById('sample');
   const choices = document.getElementById('choices');
   const stars = document.getElementById('stars');
-  const state = { mode: 'name', target: null, opts: [], busy: false, score: 0 };
+  const state = { mode: 'name', target: null, opts: [], busy: false, score: Baby.getLevel() };
 
   function ask() {
     say(state.mode === 'name' ? `${state.target.name}は どれかな？` : 'おなじ かたちは どれかな？');
@@ -63,6 +63,7 @@
     state.target = sh[0];
     state.opts = shuffle(sh.slice(0, 3));
     const colors = shuffle(PALETTE);
+    Baby.prime([`${state.target.name}！`, ...state.opts.map(s => `それは ${s.name}。`), `${state.target.name}は どれかな？`, 'おなじ かたちを さがしてね']);
     choices.innerHTML = '';
     state.opts.forEach((s, i) => {
       const c = document.createElement('div');
@@ -92,9 +93,9 @@
       state.busy = true;
       animate(c, 'glow', 900);
       SFX.correct();
-      state.score++;
+      state.score++; Baby.setLevel(state.score);
       stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
-      sayThen(['せいかい！', `${s.name}！`], { delay: 300 }, () => {
+      sayThen([Baby.praise(), `${s.name}！`], { delay: 300 }, () => {
         if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
       }, 600);
     } else {
@@ -105,7 +106,7 @@
     }
   });
 
-  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
   setupStart(() => setTimeout(newRound, 400));
   setupHome();
 })();

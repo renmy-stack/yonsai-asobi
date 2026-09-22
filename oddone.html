@@ -36,7 +36,7 @@
   const choices = document.getElementById('choices');
   const stars = document.getElementById('stars');
   const SETS = Object.values(CATALOG);
-  const state = { odd: null, opts: [], busy: false, score: 0, mainSet: null };
+  const state = { odd: null, opts: [], busy: false, score: Baby.getLevel(), mainSet: null };
 
   function ask() { say(`${state.mainSet.label}じゃないのは どれかな？`); }
 
@@ -55,6 +55,7 @@
       choices.appendChild(c);
     }
     document.getElementById('question').textContent = `${a.label}じゃないのは どれ？`;
+    Baby.prime([`${state.odd.item.name}は`, `${b.label}だね`, ...same.map(p => `${p.item.name}は`), `${a.label}だよ。`, 'ちがうのは どれかな？']);
     ask();
   }
 
@@ -69,9 +70,9 @@
       state.busy = true;
       animate(c, 'glow', 900);
       SFX.correct();
-      state.score++;
+      state.score++; Baby.setLevel(state.score);
       stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
-      Baby.sayThen(['せいかい！', `${p.item.name}は`, `${p.set.label}だね`], { delay: 300 }, () => {
+      Baby.sayThen([Baby.praise(), `${p.item.name}は`, `${p.set.label}だね`], { delay: 300 }, () => {
         if (state.score % 5 === 0) Baby.reward().then(newRound);
         else newRound();
       }, 700);
@@ -82,7 +83,7 @@
     }
   });
 
-  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
   setupStart(() => setTimeout(newRound, 400));
   setupHome();
 })();

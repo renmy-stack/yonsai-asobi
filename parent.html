@@ -49,7 +49,8 @@
 
   <section>
     <h2 style="margin-top:0">あそんだ きろく</h2>
-    <table id="logTable"><thead><tr><th>ゲーム</th><th>回数</th><th>正解</th><th>まちがい</th><th style="width:30%">正解率</th></tr></thead><tbody></tbody></table>
+    <p id="todayNote" style="margin:0 0 8px;font-weight:bold;color:#37474f"></p>
+    <table id="logTable"><thead><tr><th>ゲーム</th><th>回数</th><th>時間</th><th>正解率</th><th>最後</th></tr></thead><tbody></tbody></table>
     <p class="note" id="stickerNote"></p>
   </section>
 
@@ -59,11 +60,29 @@
   </section>
 
   <section>
+    <h2 style="margin-top:0">タイトル</h2>
+    <p class="note">メニューの上に出る名前。例: 「はるとの あそび」</p>
+    <div class="row"><input id="titleInput" type="text" maxlength="14" placeholder="4さいの あそび" style="flex:1;height:40px;border-radius:12px;border:2px solid #cfd8dc;padding:0 10px;font-size:16px;font-family:inherit"><button class="btn" id="titleSave" type="button">ほぞん</button></div>
+  </section>
+
+  <section>
+    <h2 style="margin-top:0">ぜんぶダウンロード（オフライン用）</h2>
+    <p class="note">出かける前に押すと、全ゲームの絵と声（約25MB）を端末に入れます。電波がなくても遊べます。</p>
+    <div class="row"><button class="btn" id="dlAll" type="button">ダウンロード開始</button><span id="dlState" class="note"></span></div>
+    <div class="bar" style="margin-top:8px"><i id="dlBar" style="width:0"></i></div>
+  </section>
+
+  <section>
     <h2 style="margin-top:0">データ</h2>
     <div class="row">
       <button class="btn danger" id="clearLog" type="button">きろくを けす（長押し）</button>
       <button class="btn danger" id="clearAll" type="button">シールも ぜんぶ けす（長押し）</button>
     </div>
+  </section>
+
+  <section>
+    <h2 style="margin-top:0">クレジット</h2>
+    <p class="note" style="margin:0">声: VOICEVOX:ずんだもん ／ 絵: ChatGPT で生成 ／ 効果音: ブラウザで合成</p>
   </section>
 </div>
 
@@ -71,6 +90,7 @@
 
 <script src="common.js"></script>
 <script src="games.js"></script>
+<script src="catalog.js"></script>
 <script>
 (() => {
   'use strict';
@@ -112,11 +132,45 @@
     const c = l.correct || 0, w = l.wrong || 0;
     const rate = c + w ? Math.round(c / (c + w) * 100) : null;
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${g.name}</td><td class="num">${l.play || 0}</td><td class="num">${c}</td><td class="num">${w}</td>
-      <td>${rate == null ? '-' : `<div class="bar"><i style="width:${rate}%"></i></div><span class="note">${rate}%</span>`}</td>`;
+    const mins = Math.round((l.sec || 0) / 60);
+    const last = l.last ? new Date(l.last) : null;
+    const lastStr = last ? `${last.getMonth() + 1}/${last.getDate()}` : '-';
+    tr.innerHTML = `<td>${g.name}</td><td class="num">${l.play || 0}</td><td class="num">${mins}分</td>
+      <td>${rate == null ? '-' : `<div class="bar"><i style="width:${rate}%"></i></div><span class="note">${rate}%（${c}/${c + w}）</span>`}</td><td class="note">${lastStr}</td>`;
     tbody.appendChild(tr);
   }
-  document.getElementById('stickerNote').textContent = `シール: ${d.stickers.length} 枚`;
+  document.getElementById('stickerNote').textContent = `シール: ${d.stickers.length} 枚（${new Set(d.stickers.map(s => s.id)).size} / ${Baby.STICKERS.length} 種類）`;
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todaySec = (d.days || {})[todayKey] || 0;
+  const totalSec = Object.values(d.days || {}).reduce((a, b) => a + b, 0);
+  document.getElementById('todayNote').textContent = `きょう: ${Math.round(todaySec / 60)} 分 ／ これまで: ${Math.round(totalSec / 60)} 分`;
+
+  // ---- タイトル ----
+  const titleInput = document.getElementById('titleInput');
+  titleInput.value = d.settings.title || '';
+  document.getElementById('titleSave').addEventListener('click', () => {
+    const dd = load(); dd.settings.title = titleInput.value.trim(); save(dd); SFX.pop();
+    document.getElementById('titleSave').textContent = 'ほぞんした';
+  });
+
+  // ---- ぜんぶダウンロード（Service Worker のキャッシュに入れる） ----
+  document.getElementById('dlAll').addEventListener('click', async () => {
+    const st = document.getElementById('dlState'), bar = document.getElementById('dlBar');
+    if (!(location.protocol === 'https:' || location.hostname === 'localhost')) { st.textContent = '公開版（https）でのみ使えます'; return; }
+    const urls = new Set();
+    for (const set of Object.values(CATALOG)) for (const it of set.items) urls.add(`${set.dir}/${it.id}.png`);
+    for (const g of GAMES) { urls.add(`assets/icons/${g.id}.png`); urls.add(`${g.id}.html`); }
+    ['mascot', 'trophy'].forEach(n => urls.add(`assets/icons/${n}.png`));
+    ['dog', 'car', 'apple', 'fish', 'house', 'flower', 'train', 'cat', 'butterfly', 'icecream', 'rocket', 'rabbit'].forEach(n => urls.add(`assets/coloring/${n}.png`));
+    ['index.html', 'stickers.html', 'parent.html', 'common.js', 'common.css', 'game.css', 'catalog.js', 'games.js', 'assets/voice/manifest.json'].forEach(u => urls.add(u));
+    try { const m = await fetch('assets/voice/manifest.json').then(r => r.json()); Object.values(m).forEach(f => urls.add('assets/voice/' + f)); } catch (_) {}
+    const list = [...urls]; let done = 0, fail = 0;
+    st.textContent = `0 / ${list.length}`;
+    const worker = async () => { while (list.length) { const u = list.shift(); try { const r = await fetch(u); if (!r.ok) fail++; } catch (_) { fail++; } done++; st.textContent = `${done} / ${done + list.length}`; bar.style.width = `${Math.round(done / (done + list.length) * 100)}%`; } };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    st.textContent = fail ? `完了（${fail} 件は取得できず）` : '完了！ オフラインでも遊べます';
+    SFX.correct();
+  });
 
   // ---- ゲームのオン/オフ ----
   const toggles = document.getElementById('toggles');

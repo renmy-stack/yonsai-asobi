@@ -16,6 +16,8 @@
   .choices { flex: 1.1; }
   .choice .label { position: absolute; bottom: 6px; left: 0; right: 0; text-align: center; font-size: 16px; font-weight: bold; color: #789; }
   .choice .label b { color: #c2185b; font-size: 20px; }
+  .choice .label { opacity: 0; transition: opacity .3s; }
+  .choices.reveal .choice .label { opacity: 1; }
   .choice .face { height: 70%; margin-bottom: 14%; }
 </style>
 </head>
@@ -46,7 +48,7 @@
   const choices = document.getElementById('choices');
   const stars = document.getElementById('stars');
   const question = document.getElementById('question');
-  const state = { target: null, opts: [], busy: false, score: 0, showLabel: false };
+  const state = { target: null, opts: [], busy: false, score: Baby.getLevel(), showLabel: false };
 
   function ask() { say(`${state.target.item.name[0]}で はじまるのは どれかな？`); }
 
@@ -63,7 +65,9 @@
     state.opts = shuffle([state.target, ...others]);
     kana.textContent = first;
     question.textContent = `「${first}」で はじまるのは どれ？`;
+    Baby.prime([`${first}、${state.target.item.name}！`, ...state.opts.map(p => [`${p.item.name}は`, `${p.item.name[0]}で はじまるね。`]).flat(), `${first}は どれかな？`]);
     choices.innerHTML = '';
+    choices.classList.remove('reveal');
     for (const p of state.opts) {
       const c = document.createElement('div');
       c.className = 'choice'; c.dataset.id = p.item.id;
@@ -86,11 +90,12 @@
     burst(e.clientX, e.clientY, 5);
     if (p === state.target) {
       state.busy = true;
+      choices.classList.add('reveal');          // 答えたあとに文字を見せる
       animate(c, 'glow', 900);
       SFX.correct();
-      state.score++;
+      state.score++; Baby.setLevel(state.score);
       stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
-      Baby.sayThen(['せいかい！', `${p.item.name[0]}、${p.item.name}！`], { delay: 300 }, () => {
+      Baby.sayThen([Baby.praise(), `${p.item.name[0]}、${p.item.name}！`], { delay: 300 }, () => {
         if (state.score % 5 === 0) Baby.reward().then(newRound);
         else newRound();
       }, 700);
@@ -101,7 +106,7 @@
     }
   });
 
-  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
   setupStart(() => setTimeout(newRound, 400));
   setupHome();
 })();

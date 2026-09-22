@@ -45,6 +45,10 @@
   .stamp { width: 40px; height: 40px; padding: 3px; }
   .stamp img { width: 100%; height: 100%; object-fit: contain; }
   .sep { width: 1px; height: 28px; background: rgba(0,0,0,.12); }
+  #shot { position: fixed; inset: 0; z-index: 45; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(60,60,80,.92); padding: 16px; }
+  #shot.show { display: flex; }
+  #shot .ttl { color: #fff; font-size: 16px; font-weight: bold; text-align: center; }
+  #shot img { max-width: 92vw; max-height: 70vh; border-radius: 16px; background: #fff; box-shadow: 0 8px 0 rgba(0,0,0,.2); -webkit-touch-callout: default; pointer-events: auto; }
   /* 選んでいる太さのプレビュー */
   #dot { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
   #dot i { display: block; border-radius: 50%; background: var(--c, #e53935); width: var(--w, 8px); height: var(--w, 8px); }
@@ -63,9 +67,11 @@
     <button class="tool icon" id="thick" type="button" aria-label="ふとい"><i style="width:22px;height:22px"></i></button>
     <button class="tool icon" id="eraser" type="button" aria-label="けしごむ">🧽</button>
     <button class="tool icon" id="clear" type="button" aria-label="ぜんぶけす（長押し）">🗑️</button>
+    <button class="tool icon" id="done" type="button" aria-label="できた！（えを ほぞん）">📷</button>
   </div>
 </div>
 
+<div id="shot"><div class="ttl">できた！ 　えを ながおしすると ほぞんできるよ</div><img alt="おえかき"><button class="tool" id="shotClose" type="button">もどる</button></div>
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
 <script src="common.js"></script>
@@ -134,7 +140,7 @@
   // スタンプ（キャラをぺたっと押す）
   const stamps = document.getElementById('stamps');
   const imgCache = new Map();
-  const STAMPS = [['animals', 'dog'], ['animals', 'cat'], ['vehicles', 'car'], ['foods', 'apple']];
+  const STAMPS = [['animals', 'dog'], ['vehicles', 'car'], ['foods', 'apple']];
   for (const [setKey, id] of STAMPS) {
     const set = CATALOG[setKey];
     for (const item of set.items.filter(i => i.id === id)) {
@@ -213,6 +219,18 @@
   });
   const stop = (e) => { strokes.delete(e.pointerId); ctx.globalCompositeOperation = 'source-over'; };
   cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop);
+
+  // できた！ → 絵を画像にして表示（iPhone は長押しで「写真に追加」できる）
+  const shot = document.getElementById('shot');
+  document.getElementById('done').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const out = document.createElement('canvas'); out.width = cv.width; out.height = cv.height;
+    const c2 = out.getContext('2d'); c2.fillStyle = '#fff'; c2.fillRect(0, 0, out.width, out.height); c2.drawImage(cv, 0, 0);
+    shot.querySelector('img').src = out.toDataURL('image/png');
+    shot.classList.add('show');
+    SFX.fanfare(); say('できた！');
+  });
+  document.getElementById('shotClose').addEventListener('pointerdown', (e) => { e.preventDefault(); shot.classList.remove('show'); });
 
   setupHome();
 })();

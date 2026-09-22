@@ -16,8 +16,10 @@
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(4, 1fr);
   }
+  #stage.eight { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(4, 1fr); }
   @media (orientation: landscape) {
     #stage { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
+    #stage.eight { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); }
   }
   .card {
     position: relative;
@@ -66,14 +68,17 @@
   const { SFX, say, burst, animate, cheer, celebrate, setupStart, setupHome, shuffle } = Baby;
   const SETS = [CATALOG.animals, CATALOG.vehicles, CATALOG.foods];
   const stage = document.getElementById('stage');
-  const PAIRS = 6;                        // 6組 = 12枚（3x4）
+  // 最初の2回は 4組（8枚）、そのあと 6組（12枚）
+  const pairsFor = (round) => (round < 2 ? 4 : 6);
 
-  const state = { round: 0, open: [], lock: false, left: 0 };
+  const state = { round: Baby.getLevel(), open: [], lock: false, left: 0 };
 
   function newRound() {
     const set = SETS[state.round % SETS.length];
-    state.round++;
+    const PAIRS = pairsFor(state.round);
+    state.round++; Baby.setLevel(state.round);
     state.open = []; state.lock = false; state.left = PAIRS;
+    stage.classList.toggle('eight', PAIRS === 4);
     const items = shuffle(set.items).slice(0, PAIRS);
     const deck = shuffle([...items, ...items]);
     stage.innerHTML = '';

@@ -9,9 +9,18 @@ window.Baby = (() => {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       audio = new Ctx();
     }
-    if (audio.state === 'suspended') audio.resume();
+    if (audio.state !== 'running') audio.resume();     // suspended / interrupted（電話・Siri の後）どちらも復帰
     return audio;
   }
+  // アプリに戻ってきたら音を復帰し、画面が消えないようにする
+  let wakeLock = null;
+  async function keepAwake() {
+    try { if (navigator.wakeLock && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch (_) {}
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { if (audio) ensureAudio(); keepAwake(); }
+  });
+  document.addEventListener('pointerdown', () => keepAwake(), { once: true });
 
   // 1音を鳴らす。f0→f1 に周波数が滑らかに変わる
   function tone({ type = 'sine', f0, f1 = f0, dur = 0.3, gain = 0.25, at = 0, lowpass = 0 }) {
@@ -232,6 +241,11 @@ window.Baby = (() => {
     if (window.speechSynthesis) speechSynthesis.cancel();
     if (current) { try { current.stop(); } catch (_) {} current = null; }
   }
+  // 次に言いそうなセリフを先に取得・デコードしておく（初回の間を無くす）
+  function prime(list) {
+    const go = () => { if (!VOICE) return setTimeout(go, 200); list.flat().forEach(t => VOICE[t] && loadBuf(VOICE[t]).catch(() => {})); };
+    go();
+  }
   // よく使う声を先に読み込んでおく（最初の再生の遅れを減らす）
   function preloadVoice(list) {
     const go = () => { if (!VOICE) return setTimeout(go, 200); list.forEach(t => VOICE[t] && loadBuf(VOICE[t])); };
@@ -311,7 +325,7 @@ window.Baby = (() => {
       start.classList.add('hide');
       _correct();
       burst(e.clientX, e.clientY);
-      preloadVoice(['せいかい！', 'すごい！', 'ちがうよ。', 'せいかい！ すごい！']);
+      preloadVoice([...PRAISE, 'ちがうよ。', 'シールを もらった！']);
       if (onStart) onStart();
     });
   }
@@ -362,6 +376,28 @@ window.Baby = (() => {
     save(d);
   }
 
+  // ゲームごとの到達レベル（次に開いたとき続きから）
+  function getLevel() { return (load().levels || {})[gameId] || 0; }
+  function setLevel(n) { const d = load(); (d.levels = d.levels || {})[gameId] = n; save(d); }
+
+  // 遊んだ時間: 表示中は10秒ごとに加算（ゲームごと・日ごと）
+  const today = () => new Date().toISOString().slice(0, 10);
+  function addTime(sec) {
+    const d = load();
+    const g = d.log[gameId] || (d.log[gameId] = { play: 0, correct: 0, wrong: 0, last: 0 });
+    g.sec = (g.sec || 0) + sec;
+    (d.days = d.days || {})[today()] = ((d.days || {})[today()] || 0) + sec;
+    save(d);
+  }
+  if (!['index', 'parent', 'stickers'].includes(gameId)) {
+    setInterval(() => { if (document.visibilityState === 'visible') addTime(10); }, 10000);
+  }
+
+  // ほめ言葉（毎回同じにならないように）
+  const PRAISE = ['せいかい！', 'すごい！', 'やったね！', 'そのちょうし！', 'じょうずだね！'];
+  let lastPraise = '';
+  function praise() { let p; do { p = pick(PRAISE); } while (p === lastPraise); lastPraise = p; return p; }
+
   // シール: 5問正解などのごほうび。ランダムに1枚もらえる
   const STICKERS = [
     ...['dog', 'cat', 'elephant', 'lion', 'cow', 'frog', 'rabbit', 'panda', 'giraffe', 'penguin', 'monkey', 'pig'].map(id => `animals/${id}`),
@@ -369,10 +405,13 @@ window.Baby = (() => {
     ...['apple', 'banana', 'onigiri', 'bread', 'strawberry', 'cake'].map(id => `foods/${id}`),
     'icons/trophy', 'icons/mascot',
   ];
+  const RARE = ['icons/trophy', 'icons/mascot'];       // きらきらシール（出にくい）
   function reward() {
     const d = load();
-    const id = pick(STICKERS);
+    const id = Math.random() < 0.08 ? pick(RARE) : pick(STICKERS.filter(s => !RARE.includes(s)));
     d.stickers.push({ id, at: Date.now() });
+    const complete = new Set(d.stickers.map(s => s.id)).size >= STICKERS.length && !d.completed;
+    if (complete) d.completed = Date.now();
     save(d);
     let el = document.getElementById('rewardBox');
     if (!el) {
@@ -381,19 +420,26 @@ window.Baby = (() => {
       el.innerHTML = '<div class="card"><div class="ttl">シールを もらった！</div><img alt=""><div class="cnt"></div></div>';
       document.body.appendChild(el);
     }
+    const rare = RARE.includes(id);
+    el.querySelector('.ttl').textContent = rare ? 'きらきらシール！' : 'シールを もらった！';
+    el.querySelector('.card').classList.toggle('rare', rare);
     el.querySelector('img').src = `assets/${id}.png`;
     el.querySelector('.cnt').textContent = `シール ${d.stickers.length} まい`;
     el.classList.add('show');
     SFX.fanfare();
     celebrate();
-    return say('シールを もらった！', { delay: 600 }).then(() => new Promise(res => setTimeout(() => { el.classList.remove('show'); res(); }, 700)));
+    return say(rare ? 'きらきらシールを もらった！' : 'シールを もらった！', { delay: 600 })
+      .then(() => complete ? say('ぜんぶ あつめた！ すごい！') : null)
+      .then(() => new Promise(res => setTimeout(() => { el.classList.remove('show'); res(); }, 700)));
   }
   function stickerCount() { return load().stickers.length; }
 
   // おしまいタイマー: 親が設定した時間が来たら「おしまい」画面を出す（3秒長押しで閉じる）
   function checkTimer() {
     const d = load();
-    if (!d.timerEnd || Date.now() < d.timerEnd || document.getElementById('timeUp')) return;
+    if (!d.timerEnd || document.getElementById('timeUp')) return;
+    if (Date.now() > d.timerEnd + 30 * 60000) { d.timerEnd = 0; save(d); return; }   // 昨日の分などは静かに解除
+    if (Date.now() < d.timerEnd) return;
     const el = document.createElement('div');
     el.id = 'timeUp';
     el.innerHTML = '<div class="big">🌙</div><div>きょうは おしまい！</div><div class="sub">また あそぼうね</div><button class="topbtn" id="timeUpClose" type="button">とじる（ながおし）</button>';
@@ -409,5 +455,5 @@ window.Baby = (() => {
   setTimeout(checkTimer, 1000);
   if (gameId !== 'index' && gameId !== 'parent' && gameId !== 'stickers') track('play');
 
-  return { fresh, load, save, track, reward, stickerCount, gameId, ensureAudio, tone, noise, SFX, say, sayThen, hush, preloadVoice, burst, celebrate, cheer, animate, holdButton, setupStart, setupHome, shuffle, pick };
+  return { fresh, load, save, track, reward, stickerCount, gameId, getLevel, setLevel, praise, prime, STICKERS, RARE, ensureAudio, tone, noise, SFX, say, sayThen, hush, preloadVoice, burst, celebrate, cheer, animate, holdButton, setupStart, setupHome, shuffle, pick };
 })();

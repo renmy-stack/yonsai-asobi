@@ -49,7 +49,7 @@
   const choices = document.getElementById('choices');
   const stars = document.getElementById('stars');
   const question = document.getElementById('question');
-  const state = { color: null, target: null, opts: [], busy: false, score: 0 };
+  const state = { color: null, target: null, opts: [], busy: false, score: Baby.getLevel() };
 
   function ask() { say(`${COLORS[state.color].name}のは どれかな？`); }
 
@@ -68,6 +68,7 @@
     swatch.style.background = col.css;
     swatch.textContent = col.name;
     question.textContent = `${col.name}のは どれ？`;
+    Baby.prime([`${col.name}の`, `${state.target.item.name}！`, ...state.opts.map(p => [`${p.item.name}は`, `${COLORS[p.item.color].name}だね。`]).flat(), `${col.name}は どれかな？`]);
     choices.innerHTML = '';
     for (const p of state.opts) {
       const c = document.createElement('div');
@@ -89,9 +90,9 @@
       state.busy = true;
       animate(c, 'glow', 900);
       SFX.correct();
-      state.score++;
+      state.score++; Baby.setLevel(state.score);
       stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
-      Baby.sayThen(['せいかい！', `${COLORS[state.color].name}の`, `${p.item.name}！`], { delay: 300 }, () => {
+      Baby.sayThen([Baby.praise(), `${COLORS[state.color].name}の`, `${p.item.name}！`], { delay: 300 }, () => {
         if (state.score % 5 === 0) Baby.reward().then(newRound);
         else newRound();
       }, 700);
@@ -102,7 +103,7 @@
     }
   });
 
-  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
   setupStart(() => setTimeout(newRound, 400));
   setupHome();
 })();

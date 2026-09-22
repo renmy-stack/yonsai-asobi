@@ -126,6 +126,7 @@ img { pointer-events: none; -webkit-user-drag: none; }
   animation: pop-in .5s cubic-bezier(.3,1.6,.5,1);
 }
 #rewardBox .ttl { font-size: 24px; font-weight: bold; color: #a05a00; }
+#rewardBox .card.rare { box-shadow: 0 0 0 8px #ffc107, 0 8px 0 rgba(0,0,0,.12); background: #fffbe6; }
 #rewardBox img { width: min(50vw, 220px); height: min(50vw, 220px); object-fit: contain; }
 #rewardBox .cnt { font-size: 16px; color: #789; }
 @keyframes pop-in { 0% { transform: scale(.3); } 100% { transform: scale(1); } }

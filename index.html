@@ -66,6 +66,14 @@
   .play   { --edge: #4fc3f7; }
   .create { --edge: #f48fb1; }
   .note { font-size: 11px; color: #4a6b8a; text-align: center; margin: 0; }
+  /* おうちのひと用の計算ゲート */
+  #gate { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; background: rgba(40,50,70,.85); }
+  #gate.show { display: flex; }
+  #gate .box { background: #fff; border-radius: 20px; padding: 18px 20px; width: min(86vw, 340px); text-align: center; color: #345; }
+  #gate .q { font-size: 22px; font-weight: bold; margin-bottom: 12px; }
+  #gate .nums { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  #gate .nums button { height: 46px; border: none; border-radius: 12px; background: #eceff1; font-size: 20px; font-weight: bold; font-family: inherit; }
+  #gate .cancel { margin-top: 12px; background: none; border: none; color: #789; font-size: 14px; font-family: inherit; }
 </style>
 </head>
 <body>
@@ -80,7 +88,8 @@
     <a id="stickerBtn" href="stickers.html" aria-label="シールちょう"><img src="assets/icons/trophy.png" alt=""><span id="stickerCount"></span></a>
   </header>
   <div class="menu" id="menu"></div>
-  <p class="note">🏠 を1.5秒長押しでもどる ／ ⚙️ を2秒長押しで おうちのひと</p>
+  <div id="gate"><div class="box"><div class="q" id="gateQ"></div><div class="nums" id="gateNums"></div><button class="cancel" id="gateCancel" type="button">やめる</button></div></div>
+  <p class="note">🏠 を1.5秒長押しでもどる ／ ⚙️ を2秒長押しで おうちのひと（計算あり）</p>
 </div>
 
 <script src="common.js"></script>
@@ -107,7 +116,25 @@
   }
   const n = d.stickers.length;
   document.getElementById('stickerCount').textContent = n ? `${n}` : '';
-  Baby.holdButton(document.getElementById('parentBtn'), () => { location.href = 'parent.html'; }, 2000);
+  // タイトル（親ページで変更できる）
+  const title = (d.settings.title || '').trim() || '4さいの あそび';
+  document.querySelector('header h1').textContent = title;
+  document.title = title;
+
+  // ⚙️ 長押し → 計算の問題に答えたら「おうちのひと」ページへ（子どもが偶然入らないように）
+  const gate = document.getElementById('gate');
+  Baby.holdButton(document.getElementById('parentBtn'), () => {
+    const a = 3 + Math.floor(Math.random() * 6), b = 2 + Math.floor(Math.random() * 6);
+    document.getElementById('gateQ').textContent = `${a} + ${b} = ?`;
+    const nums = document.getElementById('gateNums'); nums.innerHTML = '';
+    for (let n = 5; n <= 14; n++) {
+      const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = n;
+      btn.addEventListener('click', () => { if (n === a + b) location.href = 'parent.html'; else { gate.classList.remove('show'); Baby.SFX.wrong(); } });
+      nums.appendChild(btn);
+    }
+    gate.classList.add('show');
+  }, 2000);
+  document.getElementById('gateCancel').addEventListener('click', () => gate.classList.remove('show'));
 
   // オフライン対応（https のときだけ有効）
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
