@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>かたち</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e8f5e9">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e8f5e9 0%, #f7fff8 100%); }
+  #sample { flex: 0.9; min-height: 0; display: none; align-items: center; justify-content: center; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  #sample.show { display: flex; }
+  #sample svg { height: 80%; aspect-ratio: 1; }
+  .choices { flex: 1.2; }
+  .choice svg { width: 70%; height: 70%; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🔷</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question"></div>
+  <div class="stars" id="stars"></div>
+  <div id="sample"></div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const SHAPES = [
+    { id: 'circle',   name: 'まる',     path: 'M50 5 A45 45 0 1 1 49.9 5 Z' },
+    { id: 'triangle', name: 'さんかく', path: 'M50 8 L95 88 L5 88 Z' },
+    { id: 'square',   name: 'しかく',   path: 'M10 10 H90 V90 H10 Z' },
+    { id: 'star',     name: 'ほし',     path: 'M50 5 L61 38 L96 38 L68 59 L79 92 L50 72 L21 92 L32 59 L4 38 L39 38 Z' },
+    { id: 'heart',    name: 'ハート',   path: 'M50 90 C20 65 5 50 5 32 C5 18 16 8 29 8 C38 8 46 13 50 21 C54 13 62 8 71 8 C84 8 95 18 95 32 C95 50 80 65 50 90 Z' },
+  ];
+  const PALETTE = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#f06292'];
+  const svg = (shape, color) => `<svg viewBox="0 0 100 100"><path d="${shape.path}" fill="${color}" stroke="#333" stroke-width="4" stroke-linejoin="round"/></svg>`;
+  const question = document.getElementById('question');
+  const sample = document.getElementById('sample');
+  const choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const state = { mode: 'name', target: null, opts: [], busy: false, score: 0 };
+
+  function ask() {
+    say(state.mode === 'name' ? `${state.target.name}は どれかな？` : 'おなじ かたちは どれかな？');
+  }
+  function newRound() {
+    state.busy = false;
+    state.mode = state.score >= 3 && Math.random() < 0.5 ? 'same' : 'name';   // 慣れてきたら「おなじかたち」も
+    const sh = Baby.fresh('shape', () => shuffle(SHAPES), a => state.mode + a[0].id);
+    state.target = sh[0];
+    state.opts = shuffle(sh.slice(0, 3));
+    const colors = shuffle(PALETTE);
+    choices.innerHTML = '';
+    state.opts.forEach((s, i) => {
+      const c = document.createElement('div');
+      c.className = 'choice'; c.dataset.id = s.id;
+      c.innerHTML = svg(s, colors[i]);
+      choices.appendChild(c);
+    });
+    if (state.mode === 'same') {
+      sample.classList.add('show');
+      sample.innerHTML = svg(state.target, colors[5]);       // 選択肢とは違う色にして「形」で選ばせる
+      question.textContent = 'おなじ かたちは どれ？';
+    } else {
+      sample.classList.remove('show');
+      question.textContent = `${state.target.name}は どれ？`;
+    }
+    ask();
+  }
+
+  choices.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.choice');
+    if (!c || state.busy) return;
+    e.preventDefault();
+    const s = SHAPES.find(x => x.id === c.dataset.id);
+    animate(c.querySelector('svg'), 'bounce', 600);
+    burst(e.clientX, e.clientY, 5);
+    if (s === state.target) {
+      state.busy = true;
+      animate(c, 'glow', 900);
+      SFX.correct();
+      state.score++;
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      sayThen(['せいかい！', `${s.name}！`], { delay: 300 }, () => {
+        if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
+      }, 600);
+    } else {
+      animate(c, 'shake', 400);
+      SFX.wrong();
+      if (state.mode === 'name') say([`それは ${s.name}。`, `${state.target.name}は どれかな？`], { delay: 100 });
+      else say(['ちがうよ。', 'おなじ かたちを さがしてね'], { delay: 100 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

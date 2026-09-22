@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>じゅんばん</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e8eaf6">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e8eaf6 0%, #f3f4fb 100%); }
+  .choice { transition: transform .15s, background .15s; }
+  .choice.lit { transform: scale(1.06); background: #fff6b3; box-shadow: 0 0 0 8px rgba(255,214,0,.5); }
+  .choice.dim { opacity: .55; }
+  #trail { text-align: center; font-size: 28px; min-height: 40px; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">👀</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">よくみて おなじ じゅんばんで タッチ</div>
+  <div class="stars" id="stars"></div>
+  <div id="trail"></div>
+  <div class="choices four" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊 もういちど</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, animate, cheer, celebrate, setupStart, setupHome, shuffle, pick, tone } = Baby;
+  const choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const trail = document.getElementById('trail');
+  const NOTES = [523, 659, 784, 1047];
+  const state = { items: [], seq: [], input: 0, showing: false, len: 2, score: 0 };
+
+  function buildBoard() {
+    const set = pick(Object.values(CATALOG));
+    state.items = shuffle(set.items).slice(0, 4).map(item => ({ set, item }));
+    choices.innerHTML = '';
+    state.items.forEach((p, i) => {
+      const c = document.createElement('div');
+      c.className = 'choice'; c.dataset.i = i;
+      c.appendChild(makeFace(p.set, p.item));
+      choices.appendChild(c);
+    });
+  }
+
+  function light(i, ms = 500) {
+    const c = choices.children[i];
+    c.classList.add('lit');
+    tone({ type: 'triangle', f0: NOTES[i], dur: ms / 1000, gain: 0.2 });
+    setTimeout(() => c.classList.remove('lit'), ms);
+  }
+
+  function showSeq() {
+    state.showing = true; state.input = 0;
+    trail.textContent = '';
+    [...choices.children].forEach(c => c.classList.add('dim'));
+    say('よくみてね');
+    state.seq.forEach((i, k) => setTimeout(() => light(i, 550), 1200 + k * 800));
+    setTimeout(() => {
+      [...choices.children].forEach(c => c.classList.remove('dim'));
+      state.showing = false;
+      say('おなじ じゅんばんで タッチ！');
+    }, 1200 + state.seq.length * 800 + 200);
+  }
+
+  function newRound(sameBoard = false) {
+    if (!sameBoard) buildBoard();
+    state.seq = Baby.fresh('seq', () => Array.from({ length: state.len }, () => Math.floor(Math.random() * 4)), s => s.join(''));
+    showSeq();
+  }
+
+  choices.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.choice');
+    if (!c || state.showing) return;
+    e.preventDefault();
+    const i = Number(c.dataset.i);
+    light(i, 300);
+    animate(c.querySelector('.face'), 'bounce', 500);
+    burst(e.clientX, e.clientY, 4);
+    if (i === state.seq[state.input]) {
+      state.input++;
+      trail.textContent += '⭕';
+      if (state.input === state.seq.length) {
+        state.showing = true;
+        state.score++;
+        stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+        SFX.correct();
+        if (state.score % 3 === 0) state.len = Math.min(6, state.len + 1);   // 3回できたら1つ長く
+        Baby.sayThen('せいかい！', { delay: 200 }, () => {
+          if (state.score % 5 === 0) Baby.reward().then(() => newRound(false));
+          else newRound(state.score % 3 !== 0);
+        }, 600);
+      }
+    } else {
+      state.showing = true;
+      trail.textContent += '❌';
+      SFX.wrong();
+      state.len = Math.max(2, state.len - 1);
+      Baby.sayThen('ざんねん。 もういちど みてみよう', { delay: 100 }, () => { state.seq = Baby.fresh('seq', () => Array.from({ length: state.len }, () => Math.floor(Math.random() * 4)), s => s.join('')); showSeq(); }, 500);
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.showing) showSeq(); });
+  setupStart(() => setTimeout(() => newRound(false), 500));
+  setupHome();
+})();
+</script>
+</body>
+</html>

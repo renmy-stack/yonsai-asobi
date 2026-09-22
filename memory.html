@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>おなじカード</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e6d9ff">
+<link rel="stylesheet" href="common.css">
+<style>
+  body { background: linear-gradient(180deg, #e6d9ff 0%, #f6efff 100%); }
+  #stage {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+  }
+  @media (orientation: landscape) {
+    #stage { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); }
+  }
+  .card {
+    position: relative;
+    perspective: 800px;
+    min-height: 0;
+  }
+  .card .inner {
+    position: absolute; inset: 0;
+    transform-style: preserve-3d;
+    transition: transform .45s cubic-bezier(.3, 1.3, .5, 1);
+  }
+  .card.open .inner { transform: rotateY(180deg); }
+  .card .side {
+    position: absolute; inset: 0;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 5px 0 rgba(0,0,0,.1);
+  }
+  .card .back {
+    background: repeating-linear-gradient(45deg, #b39ddb 0 12px, #c9b8ee 12px 24px);
+    font-size: 36px;
+  }
+  .card .front { background: #fff; transform: rotateY(180deg); }
+  .card .face { width: 84%; height: 84%; display: block; }
+  .card .face img { width: 100%; height: 100%; object-fit: contain; }
+  .card .face.emoji { display: flex; align-items: center; justify-content: center; font-size: min(16vmin, 72px); }
+  .card.done .front { background: #fff6b3; }
+  .card.done { opacity: .85; }
+  .card.done .inner { animation: none; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🃏</div><div>タッチしてね</div></div>
+
+<div id="stage"></div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, animate, cheer, celebrate, setupStart, setupHome, shuffle } = Baby;
+  const SETS = [CATALOG.animals, CATALOG.vehicles, CATALOG.foods];
+  const stage = document.getElementById('stage');
+  const PAIRS = 6;                        // 6組 = 12枚（3x4）
+
+  const state = { round: 0, open: [], lock: false, left: 0 };
+
+  function newRound() {
+    const set = SETS[state.round % SETS.length];
+    state.round++;
+    state.open = []; state.lock = false; state.left = PAIRS;
+    const items = shuffle(set.items).slice(0, PAIRS);
+    const deck = shuffle([...items, ...items]);
+    stage.innerHTML = '';
+    for (const item of deck) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.id = item.id;
+      card.dataset.name = item.name;
+      card.innerHTML = `<div class="inner"><div class="side back">${set.emoji}</div><div class="side front"></div></div>`;
+      card.querySelector('.front').appendChild(makeFace(set, item));
+      stage.appendChild(card);
+    }
+    say(`おなじ ${set.label}を さがそう！`, { delay: 200 });
+  }
+
+  stage.addEventListener('pointerdown', (e) => {
+    const card = e.target.closest('.card');
+    if (!card || state.lock || card.classList.contains('open') || card.classList.contains('done')) return;
+    e.preventDefault();
+    card.classList.add('open');
+    SFX.flip();
+    burst(e.clientX, e.clientY, 4);
+    state.open.push(card);
+    if (state.open.length < 2) { say(card.dataset.name, { delay: 200 }); return; }
+
+    const [a, b] = state.open;
+    state.open = [];
+    if (a.dataset.id === b.dataset.id) {
+      a.classList.add('done'); b.classList.add('done');
+      animate(a.querySelector('.front'), 'glow', 900); animate(b.querySelector('.front'), 'glow', 900);
+      SFX.correct();
+      say([`${b.dataset.name}！`, 'おなじ！'], { delay: 150 });
+      state.left--;
+      if (state.left === 0) {
+        state.lock = true;
+        setTimeout(() => { SFX.fanfare(); cheer('🎉'); celebrate(); Baby.say('ぜんぶ みつけた！ すごい！', { delay: 300 }).then(() => Baby.reward()).then(newRound); }, 900);
+      }
+    } else {
+      state.lock = true;
+      say([b.dataset.name, 'ちがうね'], { delay: 200 });
+      setTimeout(() => {
+        a.classList.remove('open'); b.classList.remove('open');
+        SFX.wrong();
+        state.lock = false;
+      }, 1100);
+    }
+  });
+
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

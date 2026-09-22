@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>しんごう</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#bde6ff">
+<link rel="stylesheet" href="common.css">
+<style>
+  body { background: linear-gradient(180deg, #bde6ff 0%, #bde6ff 60%, #b9f0a6 60%, #b9f0a6 100%); }
+  #stage { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  #light {
+    width: 110px; padding: 12px;
+    border-radius: 24px;
+    background: #444; box-shadow: 0 6px 0 rgba(0,0,0,.25);
+    display: flex; flex-direction: column; gap: 10px; align-items: center;
+  }
+  #light .lamp { width: 72px; height: 72px; border-radius: 50%; background: #333; transition: background .2s, box-shadow .2s; }
+  #light.red .lamp.red { background: #ff4d4d; box-shadow: 0 0 24px #ff4d4d; }
+  #light.green .lamp.green { background: #4dff88; box-shadow: 0 0 24px #4dff88; }
+  #word { font-size: 40px; font-weight: bold; color: #345; min-height: 50px; }
+  #word.red { color: #d33; } #word.green { color: #2a8f4a; }
+  #score { font-size: 22px; color: #567; letter-spacing: 4px; min-height: 30px; }
+  #road {
+    position: relative;
+    width: 100%; flex: 1; min-height: 0; max-height: 34vh;
+    border-radius: 18px;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 28px, #fff2a8 28px 52px) center / 100% 6px no-repeat,
+      #8c8f96;
+    overflow: hidden;
+  }
+  .vehicle {
+    position: absolute; left: 3%; top: 8%; height: 84%; width: 36%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .vehicle.go { transition: transform 1.8s cubic-bezier(.4, 0, .6, 1); transform: translateX(var(--dist)); }
+  .vehicle .face { width: 100%; height: 100%; }
+  .vehicle .face img { width: 100%; height: 100%; object-fit: contain; }
+  .vehicle .face.emoji { display: flex; align-items: center; justify-content: center; font-size: min(20vmin, 96px); }
+  #hint { font-size: 15px; color: #567; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🚦</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div id="light"><div class="lamp red"></div><div class="lamp green"></div></div>
+  <div id="word"></div>
+  <div id="score"></div>
+  <div id="road"></div>
+  <div id="hint">あおになったら くるまをタッチ！</div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, animate, cheer, celebrate, setupStart, setupHome, pick, tone } = Baby;
+  const SET = CATALOG.vehicles;
+  const light = document.getElementById('light');
+  const word = document.getElementById('word');
+  const score = document.getElementById('score');
+  const road = document.getElementById('road');
+
+  const state = { color: 'red', timer: null, veh: null, item: null, moving: false, stars: 0 };
+
+  function setLight(color) {
+    state.color = color;
+    light.className = color;
+    word.className = color;
+    word.textContent = color === 'red' ? 'あか' : 'あお';
+    if (color === 'green') { tone({ type: 'sine', f0: 660, f1: 990, dur: 0.25, gain: 0.2 }); say('あお！ すすめ', { delay: 100 }); }
+    else { tone({ type: 'sine', f0: 400, f1: 250, dur: 0.35, gain: 0.2 }); say('あか！ とまれ', { delay: 100 }); }
+  }
+  function scheduleNext() {
+    clearTimeout(state.timer);
+    const wait = 2500 + Math.random() * 2500;
+    state.timer = setTimeout(() => {
+      if (!state.moving) setLight(state.color === 'red' ? 'green' : 'red');
+      scheduleNext();
+    }, wait);
+  }
+
+  function spawn() {
+    road.innerHTML = '';
+    state.item = pick(SET.items.filter(v => v.lane === 'road' || v.id === 'train'));
+    const veh = document.createElement('div');
+    veh.className = 'vehicle';
+    veh.appendChild(makeFace(SET, state.item));
+    road.appendChild(veh);
+    state.veh = veh;
+    state.moving = false;
+  }
+
+  road.addEventListener('pointerdown', (e) => {
+    if (!state.veh || state.moving) return;
+    e.preventDefault();
+    if (state.color === 'green') {
+      state.moving = true;
+      SFX[state.item.sfx]();
+      burst(e.clientX, e.clientY);
+      const dist = road.clientWidth + state.veh.offsetWidth;
+      state.veh.style.setProperty('--dist', `${dist}px`);
+      state.veh.classList.add('go');
+      state.stars++;
+      score.textContent = '⭐'.repeat(state.stars % 5 || 5);
+      if (state.stars % 5 === 0) {
+        setTimeout(() => { Baby.say('ごかい せいかい！ すごい！', { delay: 100 }).then(() => Baby.reward()).then(spawn); }, 1900);
+      } else {
+        Baby.sayThen('じょうずに すすめた！', { delay: 900 }, spawn, 400);
+      }
+    } else {
+      animate(state.veh, 'shake', 400);
+      SFX.wrong();
+      say('あかは とまれ！ あおまで まってね', { delay: 100 });
+    }
+  });
+
+  setupStart(() => {
+    spawn();
+    setTimeout(() => setLight('red'), 500);
+    scheduleNext();
+  });
+  setupHome();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>めいろ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e8eaf6">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e8eaf6 0%, #f5f6fc 100%); }
+  #wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { max-width: 100%; max-height: 100%; border-radius: 18px; background: #fff; box-shadow: 0 6px 0 rgba(0,0,0,.08); touch-action: none; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🌀</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">ゆびで なぞって ゴールへ</div>
+  <div class="stars" id="stars"></div>
+  <div id="wrap"><canvas id="cv"></canvas></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="next" class="topbtn right" type="button">つぎ ▶</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, celebrate, cheer, setupStart, setupHome, pick, tone } = Baby;
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const wrap = document.getElementById('wrap');
+  const stars = document.getElementById('stars');
+  const state = { n: 5, walls: null, pos: null, trail: [], done: false, score: 0, hero: null, goal: null, imgs: {} };
+  const SIZE = 720;   // 描画は固定サイズ。CSS で縮める
+  cv.width = SIZE; cv.height = SIZE;
+
+  function fit() {
+    const r = wrap.getBoundingClientRect();
+    const s = Math.min(r.width, r.height);
+    cv.style.width = cv.style.height = `${Math.floor(s)}px`;
+  }
+  window.addEventListener('resize', fit);
+
+  // 迷路生成（穴掘り法）。walls[y][x] = {t,r,b,l}
+  function generate(n) {
+    const walls = Array.from({ length: n }, () => Array.from({ length: n }, () => ({ t: true, r: true, b: true, l: true })));
+    const seen = Array.from({ length: n }, () => Array(n).fill(false));
+    const stack = [[0, 0]]; seen[0][0] = true;
+    while (stack.length) {
+      const [x, y] = stack[stack.length - 1];
+      const nb = [[x, y - 1, 't', 'b'], [x + 1, y, 'r', 'l'], [x, y + 1, 'b', 't'], [x - 1, y, 'l', 'r']]
+        .filter(([nx, ny]) => nx >= 0 && ny >= 0 && nx < n && ny < n && !seen[ny][nx]);
+      if (!nb.length) { stack.pop(); continue; }
+      const [nx, ny, a, b] = pick(nb);
+      walls[y][x][a] = false; walls[ny][nx][b] = false;
+      seen[ny][nx] = true; stack.push([nx, ny]);
+    }
+    return walls;
+  }
+
+  function img(set, item) {
+    const key = `${set.dir}/${item.id}`;
+    if (!state.imgs[key]) { const im = new Image(); im.src = key + '.png'; im.onload = draw; state.imgs[key] = im; }
+    return state.imgs[key];
+  }
+
+  function draw() {
+    const n = state.n, c = SIZE / n;
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    // 通った道
+    ctx.strokeStyle = '#ffe082'; ctx.lineWidth = c * 0.45; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (state.trail.length > 1) {
+      ctx.beginPath();
+      state.trail.forEach(([x, y], i) => { const px = x * c + c / 2, py = y * c + c / 2; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); });
+      ctx.stroke();
+    }
+    // 壁
+    ctx.strokeStyle = '#5c6bc0'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const w = state.walls[y][x], X = x * c, Y = y * c;
+      if (w.t) { ctx.moveTo(X, Y); ctx.lineTo(X + c, Y); }
+      if (w.l) { ctx.moveTo(X, Y); ctx.lineTo(X, Y + c); }
+      if (w.b) { ctx.moveTo(X, Y + c); ctx.lineTo(X + c, Y + c); }
+      if (w.r) { ctx.moveTo(X + c, Y); ctx.lineTo(X + c, Y + c); }
+    }
+    ctx.stroke();
+    // ゴールと主人公
+    const g = img(state.goal.set, state.goal.item), h = img(state.hero.set, state.hero.item);
+    const pad = c * 0.12;
+    if (g.complete && g.naturalWidth) ctx.drawImage(g, (n - 1) * c + pad, (n - 1) * c + pad, c - pad * 2, c - pad * 2);
+    if (h.complete && h.naturalWidth) ctx.drawImage(h, state.pos[0] * c + pad, state.pos[1] * c + pad, c - pad * 2, c - pad * 2);
+  }
+
+  function newRound() {
+    state.n = state.score < 2 ? 5 : state.score < 5 ? 7 : 9;
+    state.walls = generate(state.n);
+    state.pos = [0, 0]; state.trail = [[0, 0]]; state.done = false;
+    state.hero = Baby.fresh('maze-hero', () => pick(CATALOG.animals.items.map(item => ({ set: CATALOG.animals, item }))), v => v.item.id);
+    state.goal = Baby.fresh('maze-goal', () => pick(CATALOG.foods.items.map(item => ({ set: CATALOG.foods, item }))), v => v.item.id);
+    fit(); draw();
+    say([`${state.hero.item.name}を`, `${state.goal.item.name}まで つれていこう！`]);
+  }
+
+  function cellAt(e) {
+    const r = cv.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / r.width * state.n);
+    const y = Math.floor((e.clientY - r.top) / r.height * state.n);
+    return [Math.max(0, Math.min(state.n - 1, x)), Math.max(0, Math.min(state.n - 1, y))];
+  }
+  function tryMove(tx, ty) {
+    const [x, y] = state.pos;
+    const dx = tx - x, dy = ty - y;
+    if (Math.abs(dx) + Math.abs(dy) !== 1) return;
+    const w = state.walls[y][x];
+    if ((dx === 1 && w.r) || (dx === -1 && w.l) || (dy === 1 && w.b) || (dy === -1 && w.t)) { tone({ type: 'triangle', f0: 200, dur: 0.08, gain: 0.08 }); return; }
+    state.pos = [tx, ty];
+    // 戻ったら道も戻す
+    const back = state.trail.length > 1 && state.trail[state.trail.length - 2][0] === tx && state.trail[state.trail.length - 2][1] === ty;
+    if (back) state.trail.pop(); else state.trail.push([tx, ty]);
+    tone({ type: 'sine', f0: 500 + state.trail.length * 20, dur: 0.06, gain: 0.08 });
+    draw();
+    if (tx === state.n - 1 && ty === state.n - 1) {
+      state.done = true;
+      state.score++;
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      SFX.correct(); cheer('🎉'); celebrate();
+      Baby.say('ゴール！ やったね！', { delay: 300 }).then(() => state.score % 5 === 0 ? Baby.reward() : null).then(() => setTimeout(newRound, 600));
+    }
+  }
+  let dragging = false;
+  cv.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (state.done) return;
+    const [x, y] = cellAt(e);
+    dragging = true;
+    if (x !== state.pos[0] || y !== state.pos[1]) tryMove(x, y);
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (!dragging || state.done) return;
+    e.preventDefault();
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    for (const ev of evs.length ? evs : [e]) { const [x, y] = cellAt(ev); tryMove(x, y); }
+  });
+  const stop = () => { dragging = false; };
+  cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop);
+
+  document.getElementById('next').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.done) newRound(); });
+  setupStart(() => setTimeout(newRound, 300));
+  setupHome();
+})();
+</script>
+</body>
+</html>

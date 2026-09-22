@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>まちがいさがし</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f3e5f5">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #f3e5f5 0%, #fbf5fc 100%); }
+  #boards { flex: 1; min-height: 0; display: grid; grid-template-rows: 1fr 1fr; gap: 10px; }
+  @media (orientation: landscape) { #boards { grid-template-rows: 1fr; grid-template-columns: 1fr 1fr; } }
+  .board {
+    display: grid; gap: 6px; padding: 8px;
+    border-radius: 22px; background: #fff; box-shadow: 0 6px 0 rgba(0,0,0,.08);
+    min-height: 0;
+  }
+  .cell { display: flex; align-items: center; justify-content: center; border-radius: 12px; background: #faf5ff; min-height: 0; }
+  .cell .face { width: 86%; height: 86%; display: block; }
+  .cell .face img { width: 100%; height: 100%; object-fit: contain; }
+  .cell .face.emoji { display: flex; align-items: center; justify-content: center; font-size: min(10vmin, 44px); }
+  .cell.found { background: #fff6b3; box-shadow: 0 0 0 4px #ffd84d; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">👓</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">ちがう ところは どこ？</div>
+  <div class="stars" id="stars"></div>
+  <div id="boards"><div class="board" id="bA"></div><div class="board" id="bB"></div></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const bA = document.getElementById('bA'), bB = document.getElementById('bB');
+  const stars = document.getElementById('stars');
+  const state = { diff: -1, busy: false, score: 0 };
+
+  function ask() { say('ちがう ところは どこかな？'); }
+  function newRound() {
+    state.busy = false;
+    const cols = 3, rows = state.score < 5 ? 2 : 3;
+    const n = cols * rows;
+    const set = Baby.fresh('diff', () => pick(Object.values(CATALOG)), s => s.key);
+    const items = shuffle(set.items);
+    const cells = Array.from({ length: n }, (_, i) => items[i % items.length]);
+    // どちらか1マスだけ、盤面に無いものに差し替える
+    state.diff = Math.floor(Math.random() * n);
+    const unused = set.items.filter(it => !cells.includes(it));
+    const other = unused.length ? pick(unused) : pick(set.items.filter(it => it !== cells[state.diff]));
+    const cellsB = cells.slice(); cellsB[state.diff] = other;
+    for (const [board, arr] of [[bA, cells], [bB, cellsB]]) {
+      board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      board.innerHTML = '';
+      arr.forEach((it, i) => {
+        const c = document.createElement('div'); c.className = 'cell'; c.dataset.i = i;
+        c.appendChild(makeFace(set, it));
+        board.appendChild(c);
+      });
+    }
+    ask();
+  }
+
+  document.getElementById('boards').addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.cell');
+    if (!c || state.busy) return;
+    e.preventDefault();
+    burst(e.clientX, e.clientY, 5);
+    if (Number(c.dataset.i) === state.diff) {
+      state.busy = true;
+      [bA, bB].forEach(b => b.children[state.diff].classList.add('found'));
+      SFX.correct();
+      state.score++;
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      sayThen(['せいかい！', 'ここが ちがうね'], { delay: 300 }, () => {
+        if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
+      }, 700);
+    } else {
+      animate(c, 'shake', 400);
+      SFX.wrong();
+      say('そこは おなじだよ', { delay: 100 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

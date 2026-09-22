@@ -1,0 +1,47 @@
+/* 4歳向けゲーム共通の部品（common.css の上に読む） */
+#stage { display: flex; flex-direction: column; gap: 12px; }
+
+/* 上部の問題文 */
+.question {
+  text-align: center;
+  font-size: 22px; font-weight: bold; color: #345;
+  min-height: 30px;
+  padding: 0 56px;              /* 左右のボタンと重ならないように */
+}
+
+/* ⭐ の進み具合 */
+.stars { text-align: center; font-size: 20px; letter-spacing: 3px; min-height: 26px; color: #789; }
+
+/* 選択肢のカード */
+.choices {
+  flex: 1; min-height: 0;
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(3, 1fr);
+}
+.choices.two  { grid-template-columns: repeat(2, 1fr); }
+.choices.four { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
+.choices.six  { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); }
+@media (orientation: landscape) {
+  .choices.six { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); }
+}
+.choice {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 24px;
+  background: var(--card);
+  box-shadow: 0 6px 0 rgba(0,0,0,.08);
+  min-height: 0;
+  overflow: hidden;
+}
+.choice .face { width: 84%; height: 84%; display: block; }
+.choice .face img { width: 100%; height: 100%; object-fit: contain; }
+.choice .face.emoji { display: flex; align-items: center; justify-content: center; font-size: min(16vmin, 80px); line-height: 1; }
+.choice.ok { background: #fff6b3; }
+
+/* 大きな文字（ひらがな・数字） */
+.bigchar {
+  display: flex; align-items: center; justify-content: center;
+  font-size: min(30vmin, 160px); font-weight: bold; color: #345;
+  background: var(--card); border-radius: 28px;
+  box-shadow: 0 6px 0 rgba(0,0,0,.08);
+}

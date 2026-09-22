@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>シールちょう</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fff3b0">
+<link rel="stylesheet" href="common.css">
+<style>
+  body { background: linear-gradient(180deg, #fff3b0 0%, #ffe680 100%); }
+  #stage { display: flex; flex-direction: column; gap: 10px; touch-action: pan-y; overflow-y: auto; }
+  h1 { margin: 0; text-align: center; font-size: 22px; color: #7a5200; }
+  #count { text-align: center; font-size: 18px; color: #a07000; }
+  #book {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(4, 1fr);
+    padding-bottom: 20px;
+  }
+  @media (orientation: landscape) { #book { grid-template-columns: repeat(7, 1fr); } }
+  .slot {
+    position: relative; aspect-ratio: 1;
+    border-radius: 18px; background: rgba(255,255,255,.75);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 0 rgba(0,0,0,.08);
+  }
+  .slot img { width: 84%; height: 84%; object-fit: contain; }
+  .slot.empty { background: rgba(255,255,255,.35); box-shadow: inset 0 0 0 3px rgba(0,0,0,.08); }
+  .slot.empty::after { content: '？'; font-size: 34px; color: rgba(0,0,0,.18); font-weight: bold; }
+  .slot .n {
+    position: absolute; right: 4px; bottom: 4px;
+    min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px;
+    background: #ff8c42; color: #fff; font-size: 14px; font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .empty-msg { text-align: center; color: #a07000; font-size: 16px; padding: 30px 10px; }
+</style>
+</head>
+<body data-scroll="1">
+
+<div id="stage">
+  <h1>シールちょう</h1>
+  <div id="count"></div>
+  <div id="book"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { load, say, burst, animate, setupHome, SFX } = Baby;
+  const book = document.getElementById('book');
+  const d = load();
+  const total = d.stickers.length;
+  document.getElementById('count').textContent = total ? `ぜんぶで ${total} まい` : '';
+
+  // 名前をひく（どうぶつなどは catalog、それ以外は固定）
+  const NAMES = { 'icons/trophy': 'トロフィー', 'icons/mascot': 'わんちゃん' };
+  for (const set of Object.values(CATALOG)) for (const it of set.items) NAMES[`${set.key}/${it.id}`] = it.name;
+
+  // 集めた種類ごとに枚数をまとめる（最近もらった順）
+  const counts = new Map();
+  for (const s of d.stickers.slice().reverse()) counts.set(s.id, (counts.get(s.id) || 0) + 1);
+
+  if (!total) {
+    book.innerHTML = '<div class="empty-msg" style="grid-column: 1 / -1">ゲームで 5もん せいかいすると<br>シールが もらえるよ！</div>';
+  }
+  for (const [id, n] of counts) {
+    const el = document.createElement('div');
+    el.className = 'slot'; el.dataset.id = id;
+    el.innerHTML = `<img src="assets/${id}.png" alt="">` + (n > 1 ? `<span class="n">×${n}</span>` : '');
+    book.appendChild(el);
+  }
+  // まだ持っていない分は「？」で
+  const ALL = 26;
+  for (let i = counts.size; i < ALL; i++) {
+    const el = document.createElement('div'); el.className = 'slot empty'; book.appendChild(el);
+  }
+
+  book.addEventListener('pointerdown', (e) => {
+    const s = e.target.closest('.slot'); if (!s) return;
+    if (s.classList.contains('empty')) { SFX.pop(); return; }
+    Baby.ensureAudio();
+    animate(s.querySelector('img'), 'bounce', 600);
+    burst(e.clientX, e.clientY, 6);
+    const name = NAMES[s.dataset.id];
+    if (name) say(name);
+    SFX.pop();
+  });
+
+  setupHome();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>くらべよう</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fff8e1">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #fff8e1 0%, #fffdf5 100%); }
+  .choices.two { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  @media (orientation: landscape) { .choices.two { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; } }
+  .choice { padding: 8px; }
+  .choice .face { width: var(--sz, 84%); height: var(--sz, 84%); }
+  .group { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; width: 100%; height: 100%; }
+  .group .face { width: 30%; height: 45%; }
+  .group .face img { width: 100%; height: 100%; object-fit: contain; }
+  .group .face.emoji { display: flex; align-items: center; justify-content: center; font-size: min(10vmin, 48px); }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">⚖️</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question"></div>
+  <div class="stars" id="stars"></div>
+  <div class="choices two" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, cheer, celebrate, setupStart, setupHome, shuffle, pick } = Baby;
+  const choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const question = document.getElementById('question');
+  const KINDS = [
+    { key: 'big',   q: 'おおきいのは どっち？', pickAns: (a, b) => a.size > b.size },
+    { key: 'small', q: 'ちいさいのは どっち？', pickAns: (a, b) => a.size < b.size },
+    { key: 'many',  q: 'おおいのは どっち？',   pickAns: (a, b) => a.count > b.count },
+    { key: 'few',   q: 'すくないのは どっち？', pickAns: (a, b) => a.count < b.count },
+  ];
+  const state = { kind: null, sides: [], answer: 0, busy: false, score: 0 };
+
+  function ask() { say(state.kind.q); }
+
+  function newRound() {
+    state.busy = false;
+    const { kind, p } = Baby.fresh('compare', () => ({ kind: pick(KINDS), p: pick(allItems()) }), v => v.kind.key + v.p.item.id);
+    state.kind = kind;
+    state.item = p.item;
+    choices.innerHTML = '';
+    if (state.kind.key === 'big' || state.kind.key === 'small') {
+      const sizes = shuffle([90, 40]);
+      state.sides = sizes.map(size => ({ size }));
+      sizes.forEach(size => {
+        const c = document.createElement('div');
+        c.className = 'choice';
+        c.style.setProperty('--sz', `${size}%`);
+        c.appendChild(makeFace(p.set, p.item));
+        choices.appendChild(c);
+      });
+    } else {
+      let a = 1 + Math.floor(Math.random() * 5), b;
+      do { b = 1 + Math.floor(Math.random() * 5); } while (b === a);
+      state.sides = [{ count: a }, { count: b }];
+      [a, b].forEach(n => {
+        const c = document.createElement('div');
+        c.className = 'choice';
+        const g = document.createElement('div'); g.className = 'group';
+        for (let i = 0; i < n; i++) g.appendChild(makeFace(p.set, p.item));
+        c.appendChild(g);
+        choices.appendChild(c);
+      });
+    }
+    state.answer = state.kind.pickAns(state.sides[0], state.sides[1]) ? 0 : 1;
+    question.textContent = state.kind.q;
+    ask();
+  }
+
+  choices.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.choice');
+    if (!c || state.busy) return;
+    e.preventDefault();
+    const i = [...choices.children].indexOf(c);
+    burst(e.clientX, e.clientY, 5);
+    if (i === state.answer) {
+      state.busy = true;
+      animate(c, 'glow', 900);
+      SFX.correct();
+      state.score++;
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      const s = state.sides[i];
+      // 助数詞はものに合わせる（いぬ→さんびき、くるま→さんだい、りんご→さんこ）
+      const word = s.count != null ? countWord(state.item, s.count) : (state.kind.key === 'big' ? 'おおきい' : 'ちいさい');
+      const done = () => {
+        if (state.score % 5 === 0) Baby.reward().then(newRound);
+        else newRound();
+      };
+      sayThen(['せいかい！', 'こっちが', `${word}！`], { delay: 300 }, done, 700);
+    } else {
+      animate(c, 'shake', 400);
+      SFX.wrong();
+      say(['ちがうよ。', state.kind.q], { delay: 100 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>パズル</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e0f7fa">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e0f7fa 0%, #f1fbfc 100%); }
+  #wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  #board {
+    width: min(92vw, 70vh, 520px); aspect-ratio: 1;
+    display: grid; gap: 6px;
+    padding: 6px; border-radius: 24px;
+    background: #fff; box-shadow: 0 6px 0 rgba(0,0,0,.08);
+  }
+  .piece {
+    position: relative;
+    border-radius: 12px;
+    background-repeat: no-repeat;
+    background-color: #f5fbff;
+    box-shadow: inset 0 0 0 2px rgba(0,0,0,.06);
+    transition: transform .15s;
+  }
+  .piece.sel { transform: scale(0.92); box-shadow: 0 0 0 5px #ff8c42; z-index: 2; }
+  .piece.right { box-shadow: inset 0 0 0 3px #5ad36b; }
+  #board.solved .piece { box-shadow: none; border-radius: 0; }
+  #board.solved { gap: 0; }
+  #hint {
+    width: 56px; height: 56px; border-radius: 14px; background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    position: fixed; right: calc(env(safe-area-inset-right) + 10px); top: calc(env(safe-area-inset-top) + 64px);
+    box-shadow: 0 4px 0 rgba(0,0,0,.08);
+  }
+  #hint img { width: 90%; height: 90%; object-fit: contain; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🧩</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">2まい タッチして いれかえよう</div>
+  <div class="stars" id="stars"></div>
+  <div id="wrap"><div id="board"></div></div>
+</div>
+<div id="hint"></div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="next" class="topbtn right" type="button">つぎ ▶</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, animate, cheer, celebrate, setupStart, setupHome, shuffle, pick } = Baby;
+  const board = document.getElementById('board');
+  const hint = document.getElementById('hint');
+  const stars = document.getElementById('stars');
+  const question = document.getElementById('question');
+  const state = { n: 2, order: [], sel: null, busy: false, cleared: 0, pic: null };
+
+  function newRound() {
+    state.busy = false; state.sel = null;
+    // 2回クリアするごとに 2x2 → 3x3 → 4x4
+    state.n = Math.min(4, 2 + Math.floor(state.cleared / 2));
+    const n = state.n, total = n * n;
+    state.pic = Baby.fresh('puzzle', () => pick(allItems()), v => v.item.id);
+    const src = `${state.pic.set.dir}/${state.pic.item.id}.png`;
+    hint.innerHTML = `<img src="${src}" alt="">`;
+
+    // 必ず崩れた並びにする
+    do { state.order = shuffle([...Array(total).keys()]); } while (state.order.every((v, i) => v === i));
+
+    board.classList.remove('solved');
+    board.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+    board.innerHTML = '';
+    state.order.forEach((tile, pos) => {
+      const p = document.createElement('div');
+      p.className = 'piece';
+      p.dataset.pos = pos;
+      p.style.backgroundImage = `url(${src})`;
+      p.style.backgroundSize = `${n * 100}% ${n * 100}%`;
+      const r = Math.floor(tile / n), c = tile % n;
+      p.style.backgroundPosition = `${(c / (n - 1)) * 100}% ${(r / (n - 1)) * 100}%`;
+      if (tile === pos) p.classList.add('right');
+      board.appendChild(p);
+    });
+    question.textContent = `${state.pic.item.name}の パズル（${n}x${n}）`;
+    say([`${state.pic.item.name}の パズル！`, '2まい タッチして いれかえよう']);
+  }
+
+  function swap(a, b) {
+    const pa = Number(a.dataset.pos), pb = Number(b.dataset.pos);
+    [state.order[pa], state.order[pb]] = [state.order[pb], state.order[pa]];
+    const bgA = a.style.backgroundPosition, bgB = b.style.backgroundPosition;
+    a.style.backgroundPosition = bgB; b.style.backgroundPosition = bgA;
+    a.classList.toggle('right', state.order[pa] === pa);
+    b.classList.toggle('right', state.order[pb] === pb);
+    SFX.flip();
+    if (state.order.every((v, i) => v === i)) {
+      state.busy = true;
+      board.classList.add('solved');
+      state.cleared++;
+      stars.textContent = '⭐'.repeat(((state.cleared - 1) % 5) + 1);
+      setTimeout(() => { SFX.fanfare(); cheer('🎉'); celebrate(); Baby.say(['できた！', `${state.pic.item.name}だ！`], { delay: 300 }).then(() => Baby.reward()).then(newRound); }, 300);
+    }
+  }
+
+  board.addEventListener('pointerdown', (e) => {
+    const p = e.target.closest('.piece');
+    if (!p || state.busy) return;
+    e.preventDefault();
+    burst(e.clientX, e.clientY, 3);
+    if (!state.sel) { state.sel = p; p.classList.add('sel'); SFX.pop(); return; }
+    if (state.sel === p) { p.classList.remove('sel'); state.sel = null; return; }
+    state.sel.classList.remove('sel');
+    swap(state.sel, p);
+    state.sel = null;
+  });
+
+  document.getElementById('next').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) newRound(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

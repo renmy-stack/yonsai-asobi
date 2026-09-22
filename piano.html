@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ピアノ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f3e5f5">
+<link rel="stylesheet" href="common.css">
+<style>
+  body { background: linear-gradient(180deg, #f3e5f5 0%, #fce4ec 100%); }
+  #stage { display: flex; flex-direction: column; gap: 10px; }
+  #songs { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .song {
+    height: 44px; padding: 0 14px; border-radius: 22px; border: none;
+    background: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.12);
+    font-size: 17px; font-weight: bold; color: #345; font-family: inherit; touch-action: none;
+  }
+  .song.on { background: #ffd84d; }
+  #keys { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  @media (orientation: portrait) { #keys { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); } }
+  .key {
+    border-radius: 18px;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    padding-bottom: 12px; gap: 6px;
+    font-size: 26px; font-weight: bold; color: rgba(0,0,0,.55);
+    box-shadow: 0 6px 0 rgba(0,0,0,.15);
+    transition: transform .08s, filter .08s;
+    min-height: 0;
+  }
+  .key .face { width: 60%; height: 40%; }
+  .key .face img { width: 100%; height: 100%; object-fit: contain; }
+  .key .face.emoji { display: flex; align-items: center; justify-content: center; font-size: min(10vmin, 48px); }
+  .key.lit { transform: translateY(4px); filter: brightness(1.15); box-shadow: 0 2px 0 rgba(0,0,0,.15), 0 0 0 6px rgba(255,214,0,.6); }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🎹</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div id="songs"></div>
+  <div id="keys"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { say, burst, setupStart, setupHome, ensureAudio } = Baby;
+  const KEYS = [
+    { n: 'ど', f: 523.25, c: '#ff8a80' }, { n: 'れ', f: 587.33, c: '#ffb74d' }, { n: 'み', f: 659.25, c: '#fff176' }, { n: 'ふぁ', f: 698.46, c: '#aed581' },
+    { n: 'そ', f: 783.99, c: '#4fc3f7' }, { n: 'ら', f: 880.00, c: '#9fa8da' }, { n: 'し', f: 987.77, c: '#ce93d8' }, { n: 'ど', f: 1046.5, c: '#ff8a80' },
+  ];
+  // 曲: [キー番号, 長さ(拍)]
+  const SONGS = {
+    'きらきらぼし': [[0,1],[0,1],[4,1],[4,1],[5,1],[5,1],[4,2],[3,1],[3,1],[2,1],[2,1],[1,1],[1,1],[0,2]],
+    'ちょうちょう': [[4,1],[2,1],[2,2],[3,1],[1,1],[1,2],[0,1],[1,1],[2,1],[3,1],[4,1],[4,1],[4,2]],
+    'かえるのうた': [[0,1],[1,1],[2,1],[3,1],[2,1],[1,1],[0,2],[2,1],[3,1],[4,1],[5,1],[4,1],[3,1],[2,2]],
+    'メリーさんのひつじ': [[2,1],[1,1],[0,1],[1,1],[2,1],[2,1],[2,2],[1,1],[1,1],[1,2],[2,1],[4,1],[4,2]],
+  };
+  const keys = document.getElementById('keys');
+  const songs = document.getElementById('songs');
+  const items = allItems();
+
+  KEYS.forEach((k, i) => {
+    const el = document.createElement('div');
+    el.className = 'key'; el.dataset.i = i; el.style.background = k.c;
+    const p = items[i % items.length];
+    el.appendChild(makeFace(p.set, p.item));
+    el.appendChild(document.createTextNode(k.n));
+    keys.appendChild(el);
+  });
+
+  function play(i, dur = 0.5) {
+    const ctx = ensureAudio();
+    const t0 = ctx.currentTime;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    g.connect(ctx.destination);
+    [1, 2, 3].forEach((h, k) => {
+      const o = ctx.createOscillator();
+      o.type = k === 0 ? 'triangle' : 'sine';
+      o.frequency.value = KEYS[i].f * h;
+      const hg = ctx.createGain(); hg.gain.value = [1, 0.25, 0.1][k];
+      o.connect(hg).connect(g);
+      o.start(t0); o.stop(t0 + dur + 0.05);
+    });
+    const el = keys.children[i];
+    el.classList.add('lit');
+    setTimeout(() => el.classList.remove('lit'), Math.min(400, dur * 1000));
+  }
+
+  keys.addEventListener('pointerdown', (e) => {
+    const k = e.target.closest('.key'); if (!k) return;
+    e.preventDefault();
+    play(Number(k.dataset.i), 0.6);
+    burst(e.clientX, e.clientY, 4, ['🎵', '🎶', '✨']);
+  });
+  // 指をすべらせても鳴る（グリッサンド）
+  let lastKey = null;
+  keys.addEventListener('pointermove', (e) => {
+    if (e.buttons === 0 && e.pointerType === 'mouse') return;
+    const k = document.elementFromPoint(e.clientX, e.clientY)?.closest('.key');
+    if (k && k !== lastKey) { lastKey = k; play(Number(k.dataset.i), 0.4); }
+  });
+  keys.addEventListener('pointerup', () => { lastKey = null; });
+
+  // 曲を自動演奏（鍵盤が光るので真似できる）
+  let playing = null;
+  for (const name of Object.keys(SONGS)) {
+    const b = document.createElement('button');
+    b.className = 'song'; b.type = 'button'; b.textContent = '♪ ' + name;
+    songs.appendChild(b);
+    b.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (playing) { playing.forEach(clearTimeout); playing = null; [...songs.children].forEach(x => x.classList.remove('on')); }
+      b.classList.add('on');
+      const BEAT = 420;
+      let t = 300; playing = [];
+      say(name);
+      t += 900;
+      for (const [i, len] of SONGS[name]) {
+        playing.push(setTimeout(() => play(i, len * BEAT / 1000 * 0.9), t));
+        t += len * BEAT;
+      }
+      playing.push(setTimeout(() => { b.classList.remove('on'); playing = null; }, t));
+    });
+  }
+
+  setupStart();
+  setupHome();
+})();
+</script>
+</body>
+</html>

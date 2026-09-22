@@ -1,0 +1,160 @@
+/* すべてのシーン共通のスタイル */
+:root {
+  --sky: #bde6ff;
+  --grass: #b9f0a6;
+  --card: rgba(255, 255, 255, 0.78);
+  --accent: #ffd84d;
+  --accent-text: #5a4300;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--sky);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  overscroll-behavior: none;
+  font-family: "Hiragino Maru Gothic ProN", "Rounded Mplus 1c", "Yu Gothic", sans-serif;
+}
+body { position: fixed; inset: 0; }
+img { pointer-events: none; -webkit-user-drag: none; }
+
+/* 画面いっぱいのステージ（セーフエリア込み・上部はボタン分あける） */
+#stage {
+  position: absolute;
+  inset: 0;
+  padding: calc(env(safe-area-inset-top) + 64px) calc(env(safe-area-inset-right) + 12px)
+           calc(env(safe-area-inset-bottom) + 12px) calc(env(safe-area-inset-left) + 12px);
+}
+
+/* タッチした場所に飛び散る粒 */
+.particle {
+  position: fixed; left: 0; top: 0;
+  pointer-events: none;
+  font-size: 26px;
+  animation: fly 0.8s ease-out forwards;
+  z-index: 10;
+}
+@keyframes fly {
+  0%   { transform: translate(var(--x), var(--y)) scale(0.6); opacity: 1; }
+  100% { transform: translate(calc(var(--x) + var(--dx)), calc(var(--y) + var(--dy))) scale(1.4); opacity: 0; }
+}
+
+/* 上部の丸ボタン（長押し系） */
+.topbtn {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 10px);
+  height: 44px; min-width: 44px;
+  padding: 0 14px;
+  border-radius: 22px;
+  border: none;
+  background: rgba(255,255,255,.6);
+  color: #6a6a6a;
+  font-size: 20px;
+  font-weight: bold;
+  z-index: 20;
+  touch-action: none;
+  font-family: inherit;
+  overflow: hidden;
+}
+.topbtn.left  { left:  calc(env(safe-area-inset-left) + 10px); }
+.topbtn.right { right: calc(env(safe-area-inset-right) + 10px); }
+.topbtn.on { background: var(--accent); color: var(--accent-text); }
+.topbtn.holding { transform: scale(0.9); }
+.topbtn.hidden { display: none; }
+/* 長押しの進み具合 */
+.topbtn::after {
+  content: "";
+  position: absolute; left: 0; bottom: 0;
+  height: 4px; width: 0;
+  border-radius: 2px;
+  background: #ff8c42;
+}
+.topbtn.holding::after { width: 100%; transition: width 1.5s linear; }
+
+/* 最初のひとタッチ（音の解放） */
+#start {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px;
+  background: rgba(189, 230, 255, 0.96);
+  z-index: 30;
+  font-size: 28px;
+  color: #345;
+}
+#start .big { font-size: 90px; animation: wiggle 1.2s ease-in-out infinite; }
+#start .big img { width: 160px; height: 160px; }
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-8deg); }
+  50%      { transform: rotate(8deg); }
+}
+#start.hide { display: none; }
+
+/* 正解などの大きなお祝い */
+#cheer {
+  position: fixed; inset: 0;
+  display: none;
+  align-items: center; justify-content: center;
+  pointer-events: none;
+  z-index: 25;
+  font-size: min(18vw, 120px);
+  animation: pop 1.6s ease forwards;
+}
+#cheer.show { display: flex; }
+@keyframes pop {
+  0%   { transform: scale(0.3); opacity: 0; }
+  20%  { transform: scale(1.2); opacity: 1; }
+  80%  { transform: scale(1);   opacity: 1; }
+  100% { transform: scale(1.1); opacity: 0; }
+}
+
+/* シールをもらったときの表示 */
+#rewardBox {
+  position: fixed; inset: 0; z-index: 40;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(255, 240, 180, .85);
+}
+#rewardBox.show { display: flex; }
+#rewardBox .card {
+  background: #fff; border-radius: 28px; padding: 20px 28px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  box-shadow: 0 8px 0 rgba(0,0,0,.12);
+  animation: pop-in .5s cubic-bezier(.3,1.6,.5,1);
+}
+#rewardBox .ttl { font-size: 24px; font-weight: bold; color: #a05a00; }
+#rewardBox img { width: min(50vw, 220px); height: min(50vw, 220px); object-fit: contain; }
+#rewardBox .cnt { font-size: 16px; color: #789; }
+@keyframes pop-in { 0% { transform: scale(.3); } 100% { transform: scale(1); } }
+
+/* おしまい画面 */
+#timeUp {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: #2b2d42; color: #fff; font-size: 30px; font-weight: bold;
+}
+#timeUp .big { font-size: 100px; }
+#timeUp .sub { font-size: 20px; font-weight: normal; opacity: .8; }
+#timeUp .topbtn { position: static; margin-top: 24px; font-size: 16px; }
+
+.bounce { animation: bounce 0.55s cubic-bezier(.3,1.6,.5,1); }
+@keyframes bounce {
+  0%   { transform: scale(1) translateY(0); }
+  30%  { transform: scale(1.25, 0.8) translateY(6%); }
+  60%  { transform: scale(0.9, 1.2) translateY(-22%); }
+  100% { transform: scale(1) translateY(0); }
+}
+.glow { animation: glow 0.9s ease; }
+@keyframes glow {
+  0%, 100% { box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  50%      { box-shadow: 0 0 0 14px rgba(255, 214, 0, 0.55), 0 6px 0 rgba(0,0,0,.08); }
+}
+.shake { animation: shake 0.4s ease; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}

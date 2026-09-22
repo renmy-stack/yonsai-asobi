@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ならべかえ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e0f2f1">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #e0f2f1 0%, #f4fffd 100%); }
+  .choices { flex: 1; grid-template-columns: repeat(var(--n, 3), 1fr); }
+  .choice { flex-direction: column; }
+  .choice .face { width: var(--sz, 80%); height: var(--sz, 80%); }
+  .choice .group { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px; width: 90%; height: 90%; }
+  .choice .group .face { width: 45%; height: 30%; }
+  .choice .group .face img { width: 100%; height: 100%; object-fit: contain; }
+  .choice .group .face.emoji { display: flex; align-items: center; justify-content: center; font-size: min(8vmin, 36px); }
+  .choice .tag {
+    position: absolute; top: 6px; left: 6px; width: 34px; height: 34px; border-radius: 50%;
+    background: #ff8c42; color: #fff; font-weight: bold; font-size: 20px;
+    display: none; align-items: center; justify-content: center;
+  }
+  .choice.done .tag { display: flex; }
+  .choice.done { background: #fff6b3; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">📶</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question"></div>
+  <div class="stars" id="stars"></div>
+  <div class="choices" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, setupStart, setupHome, shuffle, pick } = Baby;
+  const choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const question = document.getElementById('question');
+  const KINDS = [
+    { key: 'size-asc',  q: 'ちいさい じゅんに タッチ！', text: 'ちいさい じゅんに タッチ' },
+    { key: 'size-desc', q: 'おおきい じゅんに タッチ！', text: 'おおきい じゅんに タッチ' },
+    { key: 'count-asc', q: 'すくない じゅんに タッチ！', text: 'すくない じゅんに タッチ' },
+    { key: 'count-desc', q: 'おおい じゅんに タッチ！',  text: 'おおい じゅんに タッチ' },
+  ];
+  const state = { kind: null, order: [], next: 0, busy: false, score: 0 };
+
+  function ask() { say(state.kind.q); }
+  function newRound() {
+    state.busy = false; state.next = 0;
+    state.kind = Baby.fresh('sort-kind', () => pick(KINDS), k => k.key);
+    const n = state.score < 5 ? 3 : 4;
+    const p = Baby.fresh('sort-item', () => pick(allItems()), v => v.item.id);
+    const bySize = state.kind.key.startsWith('size');
+    // 値（大きさ % か 個数）を用意し、ランダムに並べる
+    const values = bySize ? shuffle([30, 55, 80, 100]).slice(0, n) : shuffle([1, 2, 3, 4, 5]).slice(0, n);
+    const asc = state.kind.key.endsWith('asc');
+    state.order = values.slice().sort((a, b) => asc ? a - b : b - a);
+    choices.style.setProperty('--n', n);
+    choices.innerHTML = '';
+    values.forEach(v => {
+      const c = document.createElement('div');
+      c.className = 'choice'; c.dataset.v = v;
+      if (bySize) { c.style.setProperty('--sz', `${v}%`); c.appendChild(makeFace(p.set, p.item)); }
+      else { const g = document.createElement('div'); g.className = 'group'; for (let i = 0; i < v; i++) g.appendChild(makeFace(p.set, p.item)); c.appendChild(g); }
+      const tag = document.createElement('span'); tag.className = 'tag'; c.appendChild(tag);
+      choices.appendChild(c);
+    });
+    question.textContent = state.kind.text;
+    ask();
+  }
+
+  choices.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.choice');
+    if (!c || state.busy || c.classList.contains('done')) return;
+    e.preventDefault();
+    burst(e.clientX, e.clientY, 5);
+    if (Number(c.dataset.v) === state.order[state.next]) {
+      state.next++;
+      c.classList.add('done');
+      c.querySelector('.tag').textContent = state.next;
+      SFX.count(state.next);
+      if (state.next === state.order.length) {
+        state.busy = true;
+        SFX.correct();
+        state.score++;
+        stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+        sayThen('せいかい！ ならんだ！', { delay: 300 }, () => {
+          if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
+        }, 700);
+      }
+    } else {
+      animate(c, 'shake', 400);
+      SFX.wrong();
+      say(['ちがうよ。', 'つぎは どれかな？'], { delay: 100 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

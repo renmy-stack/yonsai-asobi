@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>なかまはずれ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#d4f5e9">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="game.css">
+<style>
+  body { background: linear-gradient(180deg, #d4f5e9 0%, #eafff6 100%); }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🧐</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">なかまはずれは どれ？</div>
+  <div class="stars" id="stars"></div>
+  <div class="choices four" id="choices"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, animate, cheer, celebrate, setupStart, setupHome, shuffle, pick } = Baby;
+  const choices = document.getElementById('choices');
+  const stars = document.getElementById('stars');
+  const SETS = Object.values(CATALOG);
+  const state = { odd: null, opts: [], busy: false, score: 0, mainSet: null };
+
+  function ask() { say(`${state.mainSet.label}じゃないのは どれかな？`); }
+
+  function newRound() {
+    state.busy = false;
+    const [a, b] = shuffle(SETS);
+    state.mainSet = a;
+    const same = shuffle(a.items).slice(0, 3).map(item => ({ set: a, item }));
+    state.odd = Baby.fresh('oddone', () => ({ set: b, item: pick(b.items) }), v => v.item.id);
+    state.opts = shuffle([...same, state.odd]);
+    choices.innerHTML = '';
+    for (const p of state.opts) {
+      const c = document.createElement('div');
+      c.className = 'choice'; c.dataset.id = p.item.id;
+      c.appendChild(makeFace(p.set, p.item));
+      choices.appendChild(c);
+    }
+    document.getElementById('question').textContent = `${a.label}じゃないのは どれ？`;
+    ask();
+  }
+
+  choices.addEventListener('pointerdown', (e) => {
+    const c = e.target.closest('.choice');
+    if (!c || state.busy) return;
+    e.preventDefault();
+    const p = state.opts.find(p => p.item.id === c.dataset.id);
+    animate(c.querySelector('.face'), 'bounce', 600);
+    burst(e.clientX, e.clientY, 5);
+    if (p === state.odd) {
+      state.busy = true;
+      animate(c, 'glow', 900);
+      SFX.correct();
+      state.score++;
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      Baby.sayThen(['せいかい！', `${p.item.name}は`, `${p.set.label}だね`], { delay: 300 }, () => {
+        if (state.score % 5 === 0) Baby.reward().then(newRound);
+        else newRound();
+      }, 700);
+    } else {
+      animate(c, 'shake', 400);
+      SFX.wrong();
+      say([`${p.item.name}は`, `${state.mainSet.label}だよ。`, 'ちがうのは どれかな？'], { delay: 100 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); ask(); });
+  setupStart(() => setTimeout(newRound, 400));
+  setupHome();
+})();
+</script>
+</body>
+</html>

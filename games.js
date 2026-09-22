@@ -1,0 +1,23 @@
+/* ゲームの一覧（メニューと親向けページで共通） */
+window.GAMES = [
+  { id: 'quiz',     icon: '🔍', name: 'どこかな？',     cls: 'think' },
+  { id: 'count',    icon: '🔢', name: 'かぞえよう',     cls: 'think' },
+  { id: 'add',      icon: '➕', name: 'たしざん',       cls: 'think' },
+  { id: 'compare',  icon: '⚖️', name: 'くらべよう',     cls: 'think' },
+  { id: 'sort',     icon: '📶', name: 'ならべかえ',     cls: 'think' },
+  { id: 'clock',    icon: '🕒', name: 'とけい',         cls: 'think' },
+  { id: 'color',    icon: '🎨', name: 'いろあて',       cls: 'think' },
+  { id: 'shape',    icon: '🔷', name: 'かたち',         cls: 'think' },
+  { id: 'hiragana', icon: 'あ', name: 'ひらがな',       cls: 'think' },
+  { id: 'oddone',   icon: '🧐', name: 'なかまはずれ',   cls: 'think' },
+  { id: 'shadow',   icon: '🌙', name: 'かげあて',       cls: 'play' },
+  { id: 'diff',     icon: '👓', name: 'まちがいさがし', cls: 'play' },
+  { id: 'memory',   icon: '🃏', name: 'おなじカード',   cls: 'play' },
+  { id: 'sequence', icon: '👀', name: 'じゅんばん',     cls: 'play' },
+  { id: 'puzzle',   icon: '🧩', name: 'パズル',         cls: 'play' },
+  { id: 'maze',     icon: '🌀', name: 'めいろ',         cls: 'play' },
+  { id: 'signal',   icon: '🚦', name: 'しんごう',       cls: 'play' },
+  { id: 'coloring', icon: '🖍️', name: 'ぬりえ',         cls: 'create' },
+  { id: 'draw',     icon: '✏️', name: 'おえかき',       cls: 'create' },
+  { id: 'piano',    icon: '🎹', name: 'ピアノ',         cls: 'create' },
+];

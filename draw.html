@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>おえかき</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ffffff">
+<link rel="stylesheet" href="common.css">
+<style>
+  body { background: #fff; }
+  /* 紙は画面いっぱい。ツールバーだけ下に重ねる */
+  #paper {
+    position: fixed; inset: 0;
+    background: #fff;
+    touch-action: none;
+  }
+  canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; touch-action: none; }
+  #bar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding: 6px 8px calc(env(safe-area-inset-bottom) + 6px);
+    background: rgba(240, 240, 245, .95);
+    box-shadow: 0 -2px 8px rgba(0,0,0,.08);
+    display: flex; flex-direction: column; gap: 6px;
+    touch-action: none;
+  }
+  .row { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: nowrap; }
+  .swatch {
+    width: 30px; height: 30px; border-radius: 50%; flex: 0 0 auto;
+    border: 3px solid #fff; box-shadow: 0 2px 0 rgba(0,0,0,.15);
+    transition: transform .1s;
+  }
+  .swatch.on { transform: scale(1.2); border-color: #333; }
+  .tool {
+    height: 36px; padding: 0 10px; border-radius: 18px; border: none; flex: 0 0 auto;
+    background: #fff; box-shadow: 0 2px 0 rgba(0,0,0,.15);
+    font-size: 15px; font-family: inherit; font-weight: bold; color: #345;
+    touch-action: none;
+  }
+  .tool.on { background: #ffd84d; }
+  .tool.icon { width: 40px; padding: 0; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+  .tool.icon i { display: block; border-radius: 50%; background: #345; }
+  .stamp { width: 40px; height: 40px; padding: 3px; }
+  .stamp img { width: 100%; height: 100%; object-fit: contain; }
+  .sep { width: 1px; height: 28px; background: rgba(0,0,0,.12); }
+  /* 選んでいる太さのプレビュー */
+  #dot { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+  #dot i { display: block; border-radius: 50%; background: var(--c, #e53935); width: var(--w, 8px); height: var(--w, 8px); }
+</style>
+</head>
+<body>
+
+<div id="paper"><canvas id="cv"></canvas></div>
+
+<div id="bar">
+  <div class="row" id="colors"></div>
+  <div class="row">
+    <div id="stamps" class="row"></div>
+    <div class="sep"></div>
+    <button class="tool icon on" id="thin" type="button" aria-label="ほそい"><i style="width:8px;height:8px"></i></button>
+    <button class="tool icon" id="thick" type="button" aria-label="ふとい"><i style="width:22px;height:22px"></i></button>
+    <button class="tool icon" id="eraser" type="button" aria-label="けしごむ">🧽</button>
+    <button class="tool icon" id="clear" type="button" aria-label="ぜんぶけす（長押し）">🗑️</button>
+  </div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js"></script>
+<script src="catalog.js"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, burst, holdButton, setupHome, tone, ensureAudio } = Baby;
+  const PALETTE = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#f06292', '#6d4c41', '#000000'];
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  const paper = document.getElementById('paper');
+  const state = { color: PALETTE[0], width: 8, eraser: false, stamp: null, drawing: false, last: null };
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+
+  // キャンバスの実サイズを表示サイズに合わせる（内容は保持）。表示サイズが変わるたびに呼ぶ
+  function resize() {
+    const r = paper.getBoundingClientRect();
+    const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+    if (w === cv.width && h === cv.height) return;
+    const keep = document.createElement('canvas');
+    keep.width = cv.width; keep.height = cv.height;
+    if (cv.width && cv.height) keep.getContext('2d').drawImage(cv, 0, 0);
+    cv.width = w; cv.height = h;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    if (keep.width && keep.height) ctx.drawImage(keep, 0, 0, keep.width / dpr, keep.height / dpr);
+  }
+  new ResizeObserver(resize).observe(paper);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 300));
+  resize();
+
+  // 指の位置 → キャンバス座標（表示サイズと実サイズのズレも補正する）
+  function pos(e) {
+    const r = cv.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) * (cv.width / dpr) / r.width,
+      y: (e.clientY - r.top) * (cv.height / dpr) / r.height,
+    };
+  }
+
+  // パレット
+  const colors = document.getElementById('colors');
+  PALETTE.forEach(c => {
+    const s = document.createElement('div');
+    s.className = 'swatch' + (c === state.color ? ' on' : '');
+    s.style.background = c; s.dataset.c = c;
+    colors.appendChild(s);
+  });
+  const dot = document.createElement('div'); dot.id = 'dot'; dot.innerHTML = '<i></i>'; colors.appendChild(dot);
+  function updateDot() {
+    dot.style.setProperty('--c', state.eraser ? '#ccc' : state.color);
+    dot.style.setProperty('--w', `${state.eraser ? 26 : state.width}px`);
+  }
+  colors.addEventListener('pointerdown', (e) => {
+    const s = e.target.closest('.swatch'); if (!s) return;
+    e.preventDefault();
+    state.color = s.dataset.c; state.eraser = false; state.stamp = null;
+    [...colors.children].forEach(x => x.classList.toggle('on', x === s));
+    eraserBtn.classList.remove('on');
+    [...stamps.children].forEach(x => x.classList.remove('on'));
+    updateDot();
+    SFX.pop();
+  });
+
+  // スタンプ（キャラをぺたっと押す）
+  const stamps = document.getElementById('stamps');
+  const imgCache = new Map();
+  const STAMPS = [['animals', 'dog'], ['animals', 'cat'], ['vehicles', 'car'], ['foods', 'apple']];
+  for (const [setKey, id] of STAMPS) {
+    const set = CATALOG[setKey];
+    for (const item of set.items.filter(i => i.id === id)) {
+      const b = document.createElement('button');
+      b.className = 'tool stamp'; b.type = 'button';
+      const src = `${set.dir}/${item.id}.png`;
+      b.innerHTML = `<img src="${src}" alt="${item.name}">`;
+      b.dataset.src = src;
+      stamps.appendChild(b);
+      const im = new Image(); im.src = src; imgCache.set(src, im);
+    }
+  }
+  stamps.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.stamp'); if (!b) return;
+    e.preventDefault();
+    state.stamp = b.dataset.src; state.eraser = false;
+    [...stamps.children].forEach(x => x.classList.toggle('on', x === b));
+    [...colors.children].forEach(x => x.classList.remove('on'));
+    eraserBtn.classList.remove('on');
+    SFX.pop();
+  });
+
+  const thin = document.getElementById('thin'), thick = document.getElementById('thick');
+  const eraserBtn = document.getElementById('eraser');
+  thin.addEventListener('pointerdown', (e) => { e.preventDefault(); state.width = 8; thin.classList.add('on'); thick.classList.remove('on'); updateDot(); });
+  thick.addEventListener('pointerdown', (e) => { e.preventDefault(); state.width = 24; thick.classList.add('on'); thin.classList.remove('on'); updateDot(); });
+  eraserBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    state.eraser = true; state.stamp = null;
+    eraserBtn.classList.add('on');
+    [...colors.children].forEach(x => x.classList.remove('on'));
+    [...stamps.children].forEach(x => x.classList.remove('on'));
+    updateDot();
+  });
+  holdButton(document.getElementById('clear'), () => {
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.restore();
+    SFX.correct(); say('まっしろに なったよ');
+  }, 1000);
+  updateDot();
+
+  // 描く（指ごとに線を追跡。2本指でも描ける）
+  const strokes = new Map();
+  cv.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    ensureAudio();
+    const p = pos(e);
+    if (state.stamp) {
+      const im = imgCache.get(state.stamp);
+      const s = Math.max(70, Math.min(cv.width, cv.height) / dpr * 0.22);
+      if (im.complete) ctx.drawImage(im, p.x - s / 2, p.y - s / 2, s, s);
+      tone({ type: 'sine', f0: 700, f1: 500, dur: 0.12, gain: 0.15 });
+      burst(e.clientX, e.clientY, 4);
+      return;
+    }
+    try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+    strokes.set(e.pointerId, p);
+    ctx.globalCompositeOperation = state.eraser ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = state.color;
+    ctx.lineWidth = state.eraser ? 40 : state.width;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + 0.1, p.y + 0.1); ctx.stroke();
+  });
+  cv.addEventListener('pointermove', (e) => {
+    const last = strokes.get(e.pointerId);
+    if (!last) return;
+    e.preventDefault();
+    // 高頻度イベントがあれば使う（線がなめらかになる）
+    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    ctx.globalCompositeOperation = state.eraser ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = state.color;
+    ctx.lineWidth = state.eraser ? 40 : state.width;
+    ctx.beginPath(); ctx.moveTo(last.x, last.y);
+    let p = last;
+    for (const ev of evs.length ? evs : [e]) { p = pos(ev); ctx.lineTo(p.x, p.y); }
+    ctx.stroke();
+    strokes.set(e.pointerId, p);
+  });
+  const stop = (e) => { strokes.delete(e.pointerId); ctx.globalCompositeOperation = 'source-over'; };
+  cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop);
+
+  setupHome();
+})();
+</script>
+</body>
+</html>

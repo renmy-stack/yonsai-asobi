@@ -1,0 +1,14 @@
+{
+  "name": "4さいの あそび",
+  "short_name": "あそぼ",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#bde6ff",
+  "theme_color": "#bde6ff",
+  "lang": "ja",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
