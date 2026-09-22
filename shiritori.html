@@ -14,11 +14,15 @@
   body { background: linear-gradient(180deg, #e8f5e9 0%, #f7fff8 100%); }
   #chain { display: flex; gap: 6px; justify-content: center; align-items: center; min-height: 40px; font-size: 26px; overflow: hidden; }
   #now { flex: 0.9; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
-  #now .e { font-size: min(26vmin, 130px); line-height: 1; }
+  #now .e { font-size: min(26vmin, 130px); line-height: 1; height: 60%; display: flex; align-items: center; justify-content: center; }
+  #now .e img { height: 100%; object-fit: contain; }
+  #now .e .e-pic { height: 100%; display: flex; align-items: center; }
   #now .w { font-size: min(8vw, 34px); font-weight: bold; color: #2e7d32; }
   #now .w b { color: #e65100; font-size: 1.3em; }
   .choices { flex: 1; }
   .choice { flex-direction: column; font-size: min(16vmin, 80px); line-height: 1; }
+  .choice .wpic { height: 62%; width: 90%; display: flex; align-items: center; justify-content: center; }
+  .choice .wpic img { height: 100%; width: 100%; object-fit: contain; }
   .choice .lab { font-size: 16px; color: #789; margin-top: 4px; }
 </style>
 </head>
@@ -50,7 +54,8 @@
 
   function showNow() {
     const w = state.word[1];
-    now.innerHTML = `<div class="e">${state.word[0]}</div><div class="w">${w.slice(0, -1)}<b>${w.slice(-1)}</b></div>`;
+    now.innerHTML = `<div class="e"></div><div class="w">${w.slice(0, -1)}<b>${w.slice(-1)}</b></div>`;
+    now.querySelector('.e').appendChild(wordPic(state.word, 'e-pic'));
   }
   function ask() { say([state.word[1], `つぎは 「${state.k}」`]); }
   function startChain() {
@@ -71,7 +76,7 @@
     choices.innerHTML = '';
     state.opts.forEach((w, i) => {
       const c = document.createElement('div'); c.className = 'choice'; c.dataset.i = i;
-      c.innerHTML = `<span>${w[0]}</span><span class="lab">${w[1]}</span>`;
+      c.appendChild(wordPic(w)); const lab = document.createElement('span'); lab.className = 'lab'; lab.textContent = w[1]; c.appendChild(lab);
       choices.appendChild(c);
     });
     Baby.prime([...state.opts.map(w => w[1]), `${state.k}で はじまるね。`, `${state.k}で はじまるのは どれかな？`]);

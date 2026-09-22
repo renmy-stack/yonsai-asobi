@@ -52,13 +52,16 @@
   const PAIRS = [
     { a: 'おおきい', b: 'ちいさい', draw: (which, p) => `<div class="pic" style="--sz:${which === 0 ? 90 : 35}%"><img src="${p.set.dir}/${p.item.id}.png"></div>` },
     { a: 'ながい',   b: 'みじかい', draw: (which) => `<div class="pic"><div class="bar" style="--w:${which === 0 ? 90 : 30}%"></div></div>` },
-    { a: 'おおい',   b: 'すくない', draw: (which, p) => `<div class="pic" style="flex-wrap:wrap;gap:2px">${'<img src="' + p.set.dir + '/' + p.item.id + '.png" style="width:30%;height:30%">'.repeat(which === 0 ? 6 : 1)}</div>` },
+    { a: 'おおい',   b: 'すくない', draw: (which, p) => `<div class="pic" style="flex-wrap:wrap;gap:2px">${('<img src="' + p.set.dir + '/' + p.item.id + '.png" style="width:30%;height:30%">').repeat(which === 0 ? 6 : 1)}</div>` },
     { a: 'たかい',   b: 'ひくい',   draw: (which) => `<div class="pic ${which === 0 ? 'top' : 'bottom'}">🐦</div>` },
     { a: 'あかるい', b: 'くらい',   draw: (which) => `<div class="pic ${which === 0 ? 'bright' : 'dark'}">${which === 0 ? '☀️' : '🌙'}</div>` },
     { a: 'はやい',   b: 'おそい',   draw: (which) => `<div class="pic" style="overflow:hidden"><span class="run" style="--dur:${which === 0 ? '1s' : '5s'}">${which === 0 ? '🐇' : '🐢'}</span></div>` },
     { a: 'あつい',   b: 'さむい',   draw: (which) => `<div class="pic">${which === 0 ? '🔥' : '⛄'}</div>` },
     { a: 'うえ',     b: 'した',     draw: (which) => `<div class="pic">${which === 0 ? '⬆️' : '⬇️'}</div>` },
   ];
+  // ChatGPT で作った絵（assets/opposite/<id>.png）。無ければ上の draw で描く
+  const IMG = { 'おおきい': 'ookii', 'ちいさい': 'chiisai', 'ながい': 'nagai', 'みじかい': 'mijikai', 'おおい': 'ooi', 'すくない': 'sukunai', 'たかい': 'takai', 'ひくい': 'hikui',
+    'あかるい': 'akarui', 'くらい': 'kurai', 'はやい': 'hayai', 'おそい': 'osoi', 'あつい': 'atsui', 'さむい': 'samui', 'うえ': 'ue', 'した': 'shita' };
   const word = document.getElementById('word');
   const choices = document.getElementById('choices');
   const stars = document.getElementById('stars');
@@ -79,7 +82,12 @@
     choices.innerHTML = '';
     order.forEach((which, i) => {
       const c = document.createElement('div'); c.className = 'choice'; c.dataset.i = i;
-      c.innerHTML = state.pair.draw(which, p) + `<div class="lab">${which === 0 ? state.pair.a : state.pair.b}</div>`;
+      const name = which === 0 ? state.pair.a : state.pair.b;
+      c.innerHTML = state.pair.draw(which, p) + `<div class="lab">${name}</div>`;
+      // 絵があれば差し替える
+      const img = new Image();
+      img.onload = () => { const pic = c.querySelector('.pic'); if (pic) { pic.className = 'pic'; pic.removeAttribute('style'); pic.innerHTML = ''; pic.appendChild(img); } };
+      img.src = `assets/opposite/${IMG[name]}.png`; img.alt = name; img.style.cssText = 'width:92%;height:92%;object-fit:contain';
       choices.appendChild(c);
     });
     word.innerHTML = `${state.ask}<small>の はんたいは？</small>`;
