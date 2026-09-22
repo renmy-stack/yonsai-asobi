@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#eceff1">
-<link rel="stylesheet" href="common.css?v=202609221433">
+<link rel="stylesheet" href="common.css?v=202609221451">
 <style>
   html, body { touch-action: pan-y; }
   body { background: #eceff1; color: #37474f; font-size: 15px; }
@@ -28,7 +28,8 @@
     background: #cfd8dc; color: #37474f; font-size: 15px; font-weight: bold; font-family: inherit;
   }
   .btn.on { background: #ffd84d; }
-  .btn.danger { background: #ffcdd2; color: #b71c1c; }
+  .btn.danger { background: #ffcdd2; color: #b71c1c; touch-action: none; }
+  .btn.holding { transform: scale(0.95); background: #ef9a9a; }
   label.game { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
   label.game input { width: 22px; height: 22px; }
   .note { color: #78909c; font-size: 13px; }
@@ -92,9 +93,9 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609221433"></script>
-<script src="games.js?v=202609221433"></script>
-<script src="catalog.js?v=202609221433"></script>
+<script src="common.js?v=202609221451"></script>
+<script src="games.js?v=202609221451"></script>
+<script src="catalog.js?v=202609221451"></script>
 <script>
 (() => {
   'use strict';

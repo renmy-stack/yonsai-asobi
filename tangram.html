@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e3f2fd">
-<link rel="stylesheet" href="common.css?v=202609221433">
-<link rel="stylesheet" href="game.css?v=202609221433">
+<link rel="stylesheet" href="common.css?v=202609221451">
+<link rel="stylesheet" href="game.css?v=202609221451">
 <style>
   body { background: linear-gradient(180deg, #e3f2fd 0%, #f5fbff 100%); }
   #board { flex: 1.1; min-height: 0; position: relative; border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); }
@@ -37,7 +37,7 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609221433"></script>
+<script src="common.js?v=202609221451"></script>
 <script>
 (() => {
   'use strict';
@@ -95,7 +95,7 @@
     if (!state.drag) return; e.preventDefault();
     state.drag.el.style.left = `${e.clientX - state.drag.ox}px`; state.drag.el.style.top = `${e.clientY - state.drag.oy}px`;
   });
-  document.addEventListener('pointerup', (e) => {
+  const drop = (e) => {
     if (!state.drag) return;
     const { el } = state.drag; state.drag = null;
     el.classList.remove('drag');
@@ -124,7 +124,9 @@
       el.style.left = `${piece.home[0]}%`; el.style.top = `${piece.home[1]}%`;
       tray.appendChild(el);
     }
-  });
+  };
+  document.addEventListener('pointerup', drop);
+  document.addEventListener('pointercancel', drop);
 
   setupStart(() => setTimeout(newRound, 300));
   setupHome();

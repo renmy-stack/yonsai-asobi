@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#bde6ff">
-<link rel="stylesheet" href="common.css?v=202609221433">
+<link rel="stylesheet" href="common.css?v=202609221451">
 <style>
   body { background: linear-gradient(180deg, #bde6ff 0%, #bde6ff 60%, #b9f0a6 60%, #b9f0a6 100%); }
   #stage { display: flex; flex-direction: column; align-items: center; gap: 12px; }
@@ -58,8 +58,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609221433"></script>
-<script src="catalog.js?v=202609221433"></script>
+<script src="common.js?v=202609221451"></script>
+<script src="catalog.js?v=202609221451"></script>
 <script>
 (() => {
   'use strict';
@@ -70,7 +70,7 @@
   const score = document.getElementById('score');
   const road = document.getElementById('road');
 
-  const state = { color: 'red', timer: null, veh: null, item: null, moving: false, stars: 0 };
+  const state = { color: 'red', timer: null, veh: null, item: null, moving: false, stars: Baby.getLevel() };
 
   function setLight(color) {
     state.color = color;
@@ -91,7 +91,7 @@
 
   function spawn() {
     road.innerHTML = '';
-    state.item = pick(SET.items.filter(v => v.lane === 'road' || v.id === 'train'));
+    state.item = Baby.fresh('signal', () => pick(SET.items.filter(v => v.id !== 'plane')), v => v.id);   // ひこうきは信号で止まらないので除外
     const veh = document.createElement('div');
     veh.className = 'vehicle';
     veh.appendChild(makeFace(SET, state.item));
@@ -110,7 +110,7 @@
       const dist = road.clientWidth + state.veh.offsetWidth;
       state.veh.style.setProperty('--dist', `${dist}px`);
       state.veh.classList.add('go');
-      state.stars++;
+      state.stars++; Baby.setLevel(state.stars);
       score.textContent = '⭐'.repeat(state.stars % 5 || 5);
       if (state.stars % 5 === 0) {
         setTimeout(() => { Baby.say('ごかい せいかい！ すごい！', { delay: 100 }).then(() => Baby.reward()).then(spawn); }, 1900);
