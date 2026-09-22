@@ -59,7 +59,7 @@
     scene.innerHTML = '';
     // 背景（ChatGPT の絵があれば使う。無ければ空と草）
     const bg = document.createElement('img'); bg.className = 'bg'; bg.alt = '';
-    bg.src = `assets/scenes/${BG[state.bg % BG.length]}.png`; bg.onerror = () => bg.remove();
+    bg.src = `assets/scenes/${BG[state.bg % BG.length]}.jpg`; bg.onerror = () => bg.remove();
     scene.appendChild(bg);
     state.bg++;
     // 重ならない位置に配置

@@ -1,3 +1,4 @@
 # 生成元のシート画像（大きいので公開しない）
 assets/**/_sheet*.png
 assets/_icon-src.png
+assets/**/_*-src.png
