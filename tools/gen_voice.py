@@ -9,7 +9,7 @@ VOICEVOX でゲーム内の全セリフを音声ファイル化する。
 出力:
   assets/voice/<hash>.mp3  と  assets/voice/manifest.json（セリフ → ファイル名）
 """
-import argparse, hashlib, json, os, sys, struct, wave, io, urllib.request, urllib.parse
+import argparse, hashlib, json, os, sys, struct, wave, io, re, urllib.request, urllib.parse
 
 HOST = 'http://127.0.0.1:50021'
 OUT = os.path.join(os.path.dirname(__file__), '..', 'assets', 'voice')
@@ -147,9 +147,21 @@ def phrases():
             P.add(f'{a}と {b}')
     return sorted(P)
 
+# ---------- 読みの補正 ----------
+PARTICLE = re.compile(r'は(?=[ 　？！、。「]|$)')
+def tts_text(text, speaker):
+    """助詞の「は」を VOICEVOX が「ハ」と読む文は、「わ」に置き換えて読ませる（例: つぎは→つぎわ）"""
+    alt = PARTICLE.sub('わ', text)
+    if alt == text:
+        return text
+    def kana(t):
+        q = urllib.request.Request(f'{HOST}/audio_query?' + urllib.parse.urlencode({'text': t, 'speaker': speaker}), method='POST')
+        return json.load(urllib.request.urlopen(q))['kana']
+    return alt if kana(text).count('ハ') > kana(alt).count('ハ') else text
+
 # ---------- 合成 ----------
 def synth(text, speaker, speed):
-    q = urllib.request.Request(f'{HOST}/audio_query?' + urllib.parse.urlencode({'text': text, 'speaker': speaker}), method='POST')
+    q = urllib.request.Request(f'{HOST}/audio_query?' + urllib.parse.urlencode({'text': tts_text(text, speaker), 'speaker': speaker}), method='POST')
     query = json.load(urllib.request.urlopen(q))
     query['speedScale'] = speed
     query['outputSamplingRate'] = 24000
