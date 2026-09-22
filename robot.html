@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#eceff1">
-<link rel="stylesheet" href="common.css?v=202609222121">
-<link rel="stylesheet" href="game.css?v=202609222121">
+<link rel="stylesheet" href="common.css?v=202609222130">
+<link rel="stylesheet" href="game.css?v=202609222130">
 <style>
   body { background: linear-gradient(180deg, #eceff1 0%, #ffffff 100%); }
 
@@ -18,7 +18,7 @@
   .rp { position: absolute; display: flex; align-items: center; justify-content: center; }
   .rp img { width: 100%; height: auto; display: block; } .rp.emoji { font-size: min(9vmin, 44px); }
   #armR { transform: scaleX(-1); }
-  #head { z-index: 2; } #body { z-index: 1; } #legs { z-index: 0; }
+  #head { z-index: 3; } #body { z-index: 2; } #armL, #armR { z-index: 1; } #legs { z-index: 0; }
   #bot.dance { animation: dance .5s ease-in-out 6; } @keyframes dance { 0%, 100% { transform: rotate(0) translateY(0); } 25% { transform: rotate(-6deg) translateY(-6%); } 75% { transform: rotate(6deg) translateY(-6%); } }
   #palette { height: min(30vh, 200px); display: grid; grid-template-rows: repeat(4, 1fr); gap: 6px; }
   .prow { display: grid; grid-template-columns: 64px repeat(3, minmax(0, 1fr)); gap: 6px; min-height: 0; }
@@ -44,8 +44,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609222121"></script>
-<script src="catalog.js?v=202609222121"></script>
+<script src="common.js?v=202609222130"></script>
+<script src="catalog.js?v=202609222130"></script>
 <script>
 (() => {
   'use strict';
@@ -59,16 +59,16 @@
     const W = stand.clientWidth, H = stand.clientHeight; if (!W || !H) return;
     const hw = 0.42, bw = 0.56, aw = 0.20, lw = 0.50;
     const hH = hw * aspect('head'), bH = bw * aspect('body'), lH = lw * aspect('legs');
-    const total = hH + bH + lH - 0.05;
+    const total = hH + bH + lH - 0.10;
     const B = Math.min(W * 0.9, H * 0.94 / total);
     bot.style.width = `${B}px`; bot.style.height = `${total * B}px`;
     const put = (id, w, left, top) => { const el = document.getElementById(id); el.style.width = `${w * B}px`; el.style.left = `${left * B}px`; el.style.top = `${top * B}px`; };
     put('head', hw, (1 - hw) / 2, 0);
     const bodyTop = hH - 0.03;
     put('body', bw, (1 - bw) / 2, bodyTop);
-    put('armL', aw, (1 - bw) / 2 - aw + 0.05, bodyTop + 0.04);
-    put('armR', aw, (1 + bw) / 2 - 0.05, bodyTop + 0.04);
-    put('legs', lw, (1 - lw) / 2, bodyTop + bH - 0.02);
+    put('armL', aw, (1 - bw) / 2 - aw + 0.07, bodyTop + 0.12);   // 肩の少し下から生える（胴に重ねる）
+    put('armR', aw, (1 + bw) / 2 - 0.07, bodyTop + 0.12);
+    put('legs', lw, (1 - lw) / 2, bodyTop + bH - 0.07);          // 胴の下端に食い込ませる
   }
   new ResizeObserver(layoutBot).observe(stand);
   const stars = document.getElementById('stars');
