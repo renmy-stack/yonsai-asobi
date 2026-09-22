@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fce4ec">
-<link rel="stylesheet" href="common.css?v=202609221802">
-<link rel="stylesheet" href="game.css?v=202609221802">
+<link rel="stylesheet" href="common.css?v=202609221919">
+<link rel="stylesheet" href="game.css?v=202609221919">
 <style>
   body { background: linear-gradient(180deg, #fce4ec 0%, #ffffff 100%); }
 
@@ -41,8 +41,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="replay" class="topbtn right" type="button">🔊</button>
-<script src="common.js?v=202609221802"></script>
-<script src="catalog.js?v=202609221802"></script>
+<script src="common.js?v=202609221919"></script>
+<script src="catalog.js?v=202609221919"></script>
 <script>
 (() => {
   'use strict';
@@ -91,7 +91,8 @@
         sayThen(['おなじ かず！ はんぶんこ できた！', `${KO[state.cnt[0]]}と`, `${KO[state.cnt[1]]}！`], { delay: 300 }, () => win(newRound), 600);
       } else {
         SFX.wrong(); animate(plates, 'shake', 400);
-        sayThen(['かずが ちがうよ。 もういちど', `${KO[state.cnt[0]]}と`, `${KO[state.cnt[1]]}。`], { delay: 300 }, () => {
+        const cnt = state.cnt[0] && state.cnt[1] ? [`${KO[state.cnt[0]]}と`, `${KO[state.cnt[1]]}。`] : [];   // 0個のときは数を読まない
+        sayThen(['かずが ちがうよ。 もういちど', ...cnt], { delay: 300 }, () => {
           // 戻す
           state.busy = false; state.cnt = [0, 0]; state.left = state.n;
           pile.innerHTML = ''; for (let k = 0; k < state.n; k++) pile.appendChild(Baby.pic(sweet[0], sweet[1], 'ck'));

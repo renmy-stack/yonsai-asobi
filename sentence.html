@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fce4ec">
-<link rel="stylesheet" href="common.css?v=202609221802">
-<link rel="stylesheet" href="game.css?v=202609221802">
+<link rel="stylesheet" href="common.css?v=202609221919">
+<link rel="stylesheet" href="game.css?v=202609221919">
 <style>
   body { background: linear-gradient(180deg, #fce4ec 0%, #ffffff 100%); }
 
@@ -43,8 +43,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609221802"></script>
-<script src="catalog.js?v=202609221802"></script>
+<script src="common.js?v=202609221919"></script>
+<script src="catalog.js?v=202609221919"></script>
 <script>
 (() => {
   'use strict';
@@ -96,7 +96,7 @@
       state.busy = true;
       setTimeout(() => {
         SFX.correct(); cheer('📖'); celebrate();
-        Baby.say([state.sel.who.say, state.sel.what.say, state.sel.did.say], { delay: 200 }).then(() => win(() => { again.style.visibility = 'visible'; state.busy = false; }));
+        Baby.say([state.sel.who.say, state.sel.what.say, state.sel.did.say], { delay: 200 }).then(() => win(() => { again.style.visibility = 'visible'; }));   // busy のまま。「もういっかい」で次へ
       }, 700);
     }
   });
