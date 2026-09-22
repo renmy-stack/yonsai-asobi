@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#8fd3ff">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
-<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="common.css?v=20260922g">
 <style>
   body {
     background:
@@ -115,8 +115,8 @@
   <div id="gate"><div class="box"><div class="q" id="gateQ"></div><div class="nums" id="gateNums"></div><button class="cancel" id="gateCancel" type="button">やめる</button></div></div>
 </div>
 
-<script src="common.js"></script>
-<script src="games.js"></script>
+<script src="common.js?v=20260922g"></script>
+<script src="games.js?v=20260922g"></script>
 <script>
 (() => {
   const d = Baby.load();
@@ -140,7 +140,7 @@
     const list = GAMES.filter(g => g.cat === cat && !disabled.has(g.id));
     menu.classList.toggle('many', list.length > 9);
     menu.innerHTML = '';
-    list.forEach((g, i) => {
+    list.forEach((g, i) => { try {
       const a = document.createElement('a');
       a.className = `tile ${g.cat}`;
       a.href = `${g.id}.html`;
@@ -154,10 +154,10 @@
       a.append(pic, name);
       // 遊んだことがあるゲームはレベル（メダル）を出す
       const sc = (d.levels || {})[g.id];
-      if (sc > 0 && !Baby.NO_LEVEL.includes(g.id)) { const lvEl = document.createElement('div'); lvEl.className = 'lv'; const lv = Baby.levelOf(sc); lvEl.textContent = `${Baby.MEDALS[lv]}${lv}`; a.appendChild(lvEl); }
+      try { if (sc > 0 && Baby.NO_LEVEL && !Baby.NO_LEVEL.includes(g.id)) { const lvEl = document.createElement('div'); lvEl.className = 'lv'; const lv = Baby.levelOf(sc); lvEl.textContent = `${Baby.MEDALS[lv]}${lv}`; a.appendChild(lvEl); } } catch (_) {}
       a.addEventListener('pointerdown', () => { Baby.ensureAudio(); Baby.SFX.pop(); });
       menu.appendChild(a);
-    });
+    } catch (err) { console.warn('tile', g.id, err); } });
     const dd = Baby.load(); dd.settings.lastTab = cat; Baby.save(dd);
   }
   show(current);

@@ -8,7 +8,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#eceff1">
-<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="common.css?v=20260922g">
 <style>
   html, body { touch-action: pan-y; }
   body { background: #eceff1; color: #37474f; font-size: 15px; }
@@ -89,9 +89,9 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js"></script>
-<script src="games.js"></script>
-<script src="catalog.js"></script>
+<script src="common.js?v=20260922g"></script>
+<script src="games.js?v=20260922g"></script>
+<script src="catalog.js?v=20260922g"></script>
 <script>
 (() => {
   'use strict';
@@ -137,7 +137,7 @@
     const last = l.last ? new Date(l.last) : null;
     const lastStr = last ? `${last.getMonth() + 1}/${last.getDate()}` : '-';
     const sc = (d.levels || {})[g.id] || 0;
-    const hasLv = !Baby.NO_LEVEL.includes(g.id);
+    const hasLv = !(Baby.NO_LEVEL || []).includes(g.id);
     const lvCell = hasLv ? `${Baby.MEDALS[Baby.levelOf(sc)]}${Baby.levelOf(sc)} <button class="btn" data-down="${g.id}" style="height:28px;padding:0 8px;font-size:12px">さげる</button>` : '-';
     tr.innerHTML = `<td>${g.name}</td><td>${lvCell}</td><td class="num">${l.play || 0}</td><td class="num">${mins}分</td>
       <td>${rate == null ? '-' : `<div class="bar"><i style="width:${rate}%"></i></div><span class="note">${rate}%（${c}/${c + w}）</span>`}</td><td class="note">${lastStr}</td>`;

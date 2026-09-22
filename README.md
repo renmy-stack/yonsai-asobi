@@ -112,7 +112,7 @@
 
 - URL: **https://renmy-stack.github.io/yonsai-asobi/**
 - リポジトリ: https://github.com/renmy-stack/yonsai-asobi （このフォルダ `app/` がリポジトリのルート）
-- 更新の反映: このフォルダで `git add -A && git commit -m "..." && git push` すると1〜2分で公開に反映される
+- 更新の反映: JS/CSS を変えたら `python tools/bump.py` で版番号を付け直してから `git add -A && git commit -m "..." && git push`。1〜2分で公開に反映される（版番号を付けないと、端末に残った古い JS と新しい HTML が混ざって画面が壊れることがある）
 - https なので Service Worker が有効になり、一度開けばオフラインでも遊べる
 - 生成元のシート画像（`_sheet*.png`）は `.gitignore` で除外している
 
