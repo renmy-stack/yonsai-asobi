@@ -48,7 +48,8 @@
   // 方向: 0=上 1=右 2=下 3=左。タイル種: straight(上下) / curve(上と右)。rot で回す
   const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];
   const state = { n: 3, tiles: [], start: null, goal: null, solved: false, score: Baby.getLevel() };
-  const opens = (t) => t.type === 'straight' ? [t.rot % 2, (t.rot + 2) % 4] : [t.rot % 4, (t.rot + 1) % 4];
+  // まっすぐ: 回転 0/2 で上下、1/3 で左右。カーブ: 回転 r で「r と r+1 の方向」が開く
+  const opens = (t) => t.type === 'straight' ? [t.rot % 2, t.rot % 2 + 2] : [t.rot % 4, (t.rot + 1) % 4];
 
   function generate() {
     const n = state.n;

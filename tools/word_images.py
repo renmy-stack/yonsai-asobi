@@ -161,7 +161,7 @@ def split(n, path, opp=False):
     else:
         items = WORDS[n * PER:(n + 1) * PER]; names = [w[1] for w in items]; out = os.path.join(here, '..', 'assets', 'words'); cols, rows = 5, (len(items) + 4) // 5
     os.makedirs(out, exist_ok=True)
-    subprocess.check_call([sys.executable, os.path.join(here, 'split_sheet.py'), path, out, *names, '--cols', str(cols), '--rows', str(rows), '--size', '320'])
+    subprocess.check_call([sys.executable, os.path.join(here, 'split_sheet.py'), path, out, *names, '--cols', str(cols), '--rows', str(rows), '--size', '320'] + (['--keep-all'] if opp else []))
 
 if __name__ == '__main__':
     cmd = sys.argv[1]

@@ -106,6 +106,7 @@ def main():
     ap.add_argument("--cols", type=int, default=3); ap.add_argument("--rows", type=int, default=2)
     ap.add_argument("--size", type=int, default=512, help="出力の一辺(px)")
     ap.add_argument("--keep-bg", action="store_true", help="白背景を透過にしない")
+    ap.add_argument("--keep-all", action="store_true", help="離れたパーツも残す（複数の要素からなる絵）")
     a = ap.parse_args()
     sheet = Image.open(a.sheet).convert("RGBA")
     W, H = sheet.size
@@ -116,7 +117,9 @@ def main():
         r, c = divmod(i, a.cols)
         cell = sheet.crop((int(c * cw), int(r * ch), int((c + 1) * cw), int((r + 1) * ch)))
         if not a.keep_bg:
-            cell = trim(keep_main_blob(knockout_white(cell)))
+            cell = knockout_white(cell)
+            if not a.keep_all: cell = keep_main_blob(cell)
+            cell = trim(cell)
         cell = cell.resize((a.size, a.size), Image.LANCZOS)
         path = f"{a.outdir}/{name}.png"
         cell.save(path, optimize=True)
