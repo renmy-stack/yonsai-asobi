@@ -57,6 +57,7 @@ window.GAMES = [
   { id: 'jump',     icon: '🦘', name: 'かぞえてジャンプ', cat: 'ugoki' },
   // つくる
   { id: 'coloring', icon: '🖍️', name: 'ぬりえ',         cat: 'tsukuru' },
+  { id: 'seal',     icon: '🌟', name: 'シールあそび',   cat: 'tsukuru' },
   { id: 'draw',     icon: '✏️', name: 'おえかき',       cat: 'tsukuru' },
   { id: 'piano',    icon: '🎹', name: 'ピアノ',         cat: 'tsukuru' },
   { id: 'puzzle',   icon: '🧩', name: 'パズル',         cat: 'tsukuru' },

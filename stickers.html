@@ -8,12 +8,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff3b0">
-<link rel="stylesheet" href="common.css?v=202609231242">
+<link rel="stylesheet" href="common.css?v=202609231357">
 <style>
   body { background: linear-gradient(180deg, #fff3b0 0%, #ffe680 100%); }
   #stage { display: flex; flex-direction: column; gap: 10px; touch-action: pan-y; overflow-y: auto; }
   h1 { margin: 0; text-align: center; font-size: 22px; color: #7a5200; }
   #count { text-align: center; font-size: 18px; color: #a07000; }
+  #playBtn { align-self: center; height: 44px; padding: 0 18px; border-radius: 22px; background: #ff8c42; color: #fff; font-size: 17px; font-weight: bold; text-decoration: none; display: flex; align-items: center; box-shadow: 0 4px 0 rgba(0,0,0,.15); }
   #book {
     display: grid; gap: 10px;
     grid-template-columns: repeat(4, 1fr);
@@ -44,13 +45,14 @@
 <div id="stage">
   <h1>シールちょう</h1>
   <div id="count"></div>
+  <a id="playBtn" href="seal.html">🌟 シールで あそぶ ▶</a>
   <div id="book"></div>
 </div>
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609231242"></script>
-<script src="catalog.js?v=202609231242"></script>
+<script src="common.js?v=202609231357"></script>
+<script src="catalog.js?v=202609231357"></script>
 <script>
 (() => {
   'use strict';

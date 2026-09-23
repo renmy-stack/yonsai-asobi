@@ -393,7 +393,7 @@ window.Baby = (() => {
   function setLevel(n) { const d = load(); (d.levels = d.levels || {})[gameId] = n; save(d); renderLevel(); }
   // レベル: 5問正解ごとに1つ上がる（最大5）。メダルで見せる
   const MEDALS = ['', '🥉', '🥈', '🥇', '👑', '💎'];
-  const NO_LEVEL = ['index', 'parent', 'stickers', 'draw', 'coloring', 'piano'];
+  const NO_LEVEL = ['index', 'parent', 'stickers', 'draw', 'coloring', 'piano', 'seal'];
   const levelOf = (score) => Math.min(5, 1 + Math.floor((score || 0) / 5));
   function level() { return levelOf(getLevel()); }
   // ゲーム画面の上に「🥈 レベル 2」を出す
