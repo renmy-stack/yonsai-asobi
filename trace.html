@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff8e1">
-<link rel="stylesheet" href="common.css?v=202609231237">
-<link rel="stylesheet" href="game.css?v=202609231237">
+<link rel="stylesheet" href="common.css?v=202609231242">
+<link rel="stylesheet" href="game.css?v=202609231242">
 <style>
   body { background: linear-gradient(180deg, #fff8e1 0%, #fffdf5 100%); }
   #sets, #modes { display: flex; gap: 8px; justify-content: center; }
@@ -47,8 +47,8 @@
 <!-- 書き順の道すじの長さ・途中の点を測るためだけの見えない SVG -->
 <svg id="hidsvg" xmlns="http://www.w3.org/2000/svg"><path id="measure" d=""/></svg>
 
-<script src="common.js?v=202609231237"></script>
-<script src="strokes.js?v=202609231237"></script>
+<script src="common.js?v=202609231242"></script>
+<script src="strokes.js?v=202609231242"></script>
 <script>
 (() => {
   'use strict';
@@ -121,7 +121,7 @@
   }
 
   // ---------- かきじゅんモード: 1画ずつ、お手本のアニメ → 指でなぞる → 判定 ----------
-  const COL = { ghost: '#dedede', done: '#ff8c42', cur: '#ffd9b8', demo: '#ffb070', dot: '#4caf50' };
+  const COL = { ghost: '#dedede', done: '#ff8c42', cur: '#ffeedd', demo: '#ffd6b5', dot: '#4caf50' };   // お手本（demo）は子どもの線（#ff8c42）よりずっと薄く。書いた感が出るように
   // 1画ぶんの情報を作る。長さと途中の点は SVG の path に測ってもらう
   function buildStroke(d) {
     measure.setAttribute('d', d);
