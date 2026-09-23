@@ -8,17 +8,19 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff8e1">
-<link rel="stylesheet" href="common.css?v=202609222341">
-<link rel="stylesheet" href="game.css?v=202609222341">
+<link rel="stylesheet" href="common.css?v=202609231237">
+<link rel="stylesheet" href="game.css?v=202609231237">
 <style>
   body { background: linear-gradient(180deg, #fff8e1 0%, #fffdf5 100%); }
-  #sets { display: flex; gap: 8px; justify-content: center; }
+  #sets, #modes { display: flex; gap: 8px; justify-content: center; }
   .set { height: 40px; padding: 0 14px; border-radius: 20px; border: none; background: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.12); font-size: 16px; font-weight: bold; color: #345; font-family: inherit; touch-action: none; }
   .set.on { background: #ffd84d; }
+  #modes .set.on { background: #b9ecab; }
   #wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
   canvas { max-width: 100%; max-height: 100%; border-radius: 24px; background: #fff; box-shadow: 0 6px 0 rgba(0,0,0,.08); touch-action: none; }
   #meter { height: 12px; border-radius: 6px; background: #e0e0e0; overflow: hidden; }
   #meter i { display: block; height: 100%; width: 0; background: #ff8c42; transition: width .2s; }
+  #hidsvg { position: absolute; width: 0; height: 0; overflow: hidden; visibility: hidden; }
 </style>
 </head>
 <body>
@@ -31,6 +33,10 @@
     <button class="set" data-set="num" type="button">すうじ</button>
     <button class="set" data-set="kana" type="button">ひらがな</button>
   </div>
+  <div id="modes">
+    <button class="set on" data-mode="free" type="button">✍️ なぞる</button>
+    <button class="set" data-mode="order" type="button">①②③ かきじゅん</button>
+  </div>
   <div class="stars" id="stars"></div>
   <div id="wrap"><canvas id="cv" width="640" height="640"></canvas></div>
   <div id="meter"><i></i></div>
@@ -38,12 +44,15 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="next" class="topbtn right" type="button">つぎ ▶</button>
+<!-- 書き順の道すじの長さ・途中の点を測るためだけの見えない SVG -->
+<svg id="hidsvg" xmlns="http://www.w3.org/2000/svg"><path id="measure" d=""/></svg>
 
-<script src="common.js?v=202609222341"></script>
+<script src="common.js?v=202609231237"></script>
+<script src="strokes.js?v=202609231237"></script>
 <script>
 (() => {
   'use strict';
-  const { SFX, say, burst, celebrate, cheer, setupStart, setupHome, pick, tone } = Baby;
+  const { SFX, say, celebrate, cheer, setupStart, setupHome, tone } = Baby;
   const SETS = {
     shape: ['○', '△', '□', '☆', '♡', '〜'],
     num: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
@@ -51,6 +60,7 @@
   };
   const READ = { '○': 'まる', '△': 'さんかく', '□': 'しかく', '☆': 'ほし', '♡': 'ハート', '〜': 'なみせん',
     '1': 'いち', '2': 'に', '3': 'さん', '4': 'よん', '5': 'ご', '6': 'ろく', '7': 'なな', '8': 'はち', '9': 'きゅう', '10': 'じゅう' };
+  const NTH = ['いちばんめ！', 'にばんめ！', 'さんばんめ！', 'よんばんめ！'];
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d', { willReadFrequently: true });
   // 判定用: 指が通った道を太め（幅130）に記録する見えないキャンバス。形の中心をなぞれば合格になる
@@ -58,8 +68,18 @@
   const hctx = hit.getContext('2d', { willReadFrequently: true });
   const meter = document.querySelector('#meter i');
   const stars = document.getElementById('stars');
+  const measure = document.getElementById('measure');
   const S = 640;
-  const state = { set: 'shape', idx: 0, mask: null, maskCount: 0, drawing: false, last: null, done: false, score: Baby.getLevel() };
+  const K = S / 109;   // 書き順データ（109×109）→ キャンバス（640×640）の倍率
+  const state = { set: 'shape', idx: 0, mode: 'free', mask: null, maskCount: 0, drawing: false, last: null, done: false, score: Baby.getLevel(),
+    // かきじゅんモード用
+    strokes: [],   // 1画ずつの情報（道すじ・始点・終点・判定マスク）
+    si: 0,         // いま何画目か
+    fails: 0,      // この画で続けて失敗した回数（2回で判定をゆるめる）
+    pts: [],       // いま指でなぞっている軌跡
+    anim: 0 };     // お手本アニメの requestAnimationFrame id
+  try { if (localStorage.getItem('trace.mode') === 'order') state.mode = 'order'; } catch (_) {}
+  document.querySelectorAll('#modes .set').forEach(b => b.classList.toggle('on', b.dataset.mode === state.mode));
 
   function fit() {
     const box = document.getElementById('wrap').getBoundingClientRect();
@@ -67,9 +87,11 @@
     cv.style.width = cv.style.height = `${Math.floor(s)}px`;
   }
   window.addEventListener('resize', fit);
+  const current = () => SETS[state.set][state.idx];
 
-  // お手本を描く（薄いグレー）。マスク（お手本の画素）も作る
+  // ---------- なぞるモード: お手本を丸ごと描いて、7割なぞれたら合格 ----------
   function drawGlyph(target, color) {
+    target.setTransform(1, 0, 0, 1, 0, 0);
     target.fillStyle = '#fff'; target.fillRect(0, 0, S, S);
     target.strokeStyle = color; target.fillStyle = color;
     target.lineWidth = 34; target.lineCap = 'round'; target.lineJoin = 'round';
@@ -89,36 +111,145 @@
       target.fillText(ch, S / 2, S / 2 + 20);
     }
   }
-  const current = () => SETS[state.set][state.idx];
-
-  function load() {
-    state.done = false;
-    drawGlyph(ctx, '#d7d7d7');
-    // マスク: 別キャンバスに黒で描いて画素を数える
-    const m = document.createElement('canvas'); m.width = m.height = S;
-    const mc = m.getContext('2d', { willReadFrequently: true });
-    drawGlyph(mc, '#000');
-    const data = mc.getImageData(0, 0, S, S).data;
-    state.mask = new Uint8Array(S * S); state.maskCount = 0;
-    for (let i = 0; i < S * S; i++) if (data[i * 4] < 128) { state.mask[i] = 1; state.maskCount++; }
-    meter.style.width = '0';
-    hctx.clearRect(0, 0, S, S);
-    fit();
-    const ch = current();
-    say(READ[ch] || ch);
-  }
   function progress() {
     const data = hctx.getImageData(0, 0, S, S).data;
     let n = 0;
     for (let i = 0; i < S * S; i++) if (state.mask[i] && data[i * 4 + 3] > 0) n++;   // 指の通り道の近くにあるお手本の画素
     const p = n / state.maskCount;
     meter.style.width = `${Math.min(100, Math.round(p * 100))}%`;
-    if (p >= [0, 0.55, 0.6, 0.65, 0.7, 0.75][Baby.level()] && !state.done) {   // 合格ラインがだんだん上がる
-      state.done = true;
-      SFX.correct(); cheer('🎉'); celebrate();
-      state.score++; Baby.setLevel(state.score);
-      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
-      Baby.say(['できた！', READ[current()] || current()], { delay: 300 }).then(() => state.score % 5 === 0 ? Baby.reward() : null).then(() => setTimeout(next, 500));
+    if (p >= [0, 0.55, 0.6, 0.65, 0.7, 0.75][Baby.level()] && !state.done) finish();   // 合格ラインがだんだん上がる
+  }
+
+  // ---------- かきじゅんモード: 1画ずつ、お手本のアニメ → 指でなぞる → 判定 ----------
+  const COL = { ghost: '#dedede', done: '#ff8c42', cur: '#ffd9b8', demo: '#ffb070', dot: '#4caf50' };
+  // 1画ぶんの情報を作る。長さと途中の点は SVG の path に測ってもらう
+  function buildStroke(d) {
+    measure.setAttribute('d', d);
+    const len = measure.getTotalLength();
+    const n = Math.max(2, Math.ceil(len / 1.5));
+    const pts = [];
+    for (let i = 0; i <= n; i++) { const p = measure.getPointAtLength(len * i / n); pts.push({ x: p.x * K, y: p.y * K }); }
+    const m = document.createElement('canvas'); m.width = m.height = S;
+    const mc = m.getContext('2d', { willReadFrequently: true });
+    mc.setTransform(K, 0, 0, K, 0, 0);
+    mc.strokeStyle = '#000'; mc.lineWidth = 7; mc.lineCap = 'round'; mc.lineJoin = 'round';
+    mc.stroke(new Path2D(d));
+    const data = mc.getImageData(0, 0, S, S).data;
+    const mask = new Uint8Array(S * S); let count = 0;
+    for (let i = 0; i < S * S; i++) if (data[i * 4 + 3] > 0) { mask[i] = 1; count++; }
+    return { path: new Path2D(d), len, start: pts[0], end: pts[pts.length - 1], pts, mask, count };
+  }
+  // 画面を描く。demo: null=お手本なし / 0〜1=お手本アニメの進み / 'full'=お手本を全部見せて始点に印
+  function drawOrder(demo) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, S, S);
+    ctx.setTransform(K, 0, 0, K, 0, 0);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 7; ctx.setLineDash([]);
+    state.strokes.forEach((st, i) => {
+      ctx.strokeStyle = i < state.si ? COL.done : i === state.si ? COL.cur : COL.ghost;
+      ctx.stroke(st.path);
+    });
+    const st = state.strokes[state.si];
+    if (st) {
+      const t = demo === 'full' ? 1 : demo;
+      if (t != null) {
+        // 途中まで描いたお手本（破線のずらしで見える長さを調節する）
+        ctx.strokeStyle = COL.demo; ctx.setLineDash([st.len, st.len]); ctx.lineDashOffset = st.len * (1 - t);
+        ctx.stroke(st.path); ctx.setLineDash([]);
+      }
+      // 番号つきの印。アニメ中は道すじの上を動く。それ以外は始点に置く
+      const p = (t != null && demo !== 'full') ? st.pts[Math.min(st.pts.length - 1, Math.floor(t * (st.pts.length - 1)))] : st.start;
+      ctx.fillStyle = COL.dot; ctx.beginPath(); ctx.arc(p.x / K, p.y / K, 7.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(state.si + 1), p.x / K, p.y / K + 0.5);
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  // お手本のアニメ（点が道すじをたどる）。終わったら始点に印を戻して待つ
+  function demo() {
+    cancelAnimationFrame(state.anim);
+    const st = state.strokes[state.si]; if (!st) return;
+    const dur = 400 + st.len * 14, t0 = performance.now();
+    const tick = (now) => {
+      if (state.drawing) return;
+      const t = Math.min(1, (now - t0) / dur);
+      drawOrder(t < 1 ? t : 'full');
+      if (t < 1) state.anim = requestAnimationFrame(tick);
+    };
+    state.anim = requestAnimationFrame(tick);
+  }
+  const R_END = [0, 85, 80, 75, 70, 65];          // 始点・終点の許容距離（px）。レベルで少し厳しく
+  const NEED = [0, 0.5, 0.55, 0.6, 0.65, 0.7];    // 画のどれだけをなぞれば合格か
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  function judgeStroke() {
+    const st = state.strokes[state.si], lv = Baby.level(), pts = state.pts;
+    if (!st || pts.length < 2) { redo(true); return; }
+    const easy = state.fails >= 2;                   // 2回つづけて失敗したら ゆるめる（つまずかせない）
+    const r = R_END[lv] * (easy ? 1.5 : 1);
+    const startOK = dist(pts[0], st.start) < r;
+    const endOK = easy || dist(pts[pts.length - 1], st.end) < r;
+    // 画のどれくらいをなぞれたか
+    const data = hctx.getImageData(0, 0, S, S).data;
+    let n = 0; for (let i = 0; i < S * S; i++) if (st.mask[i] && data[i * 4 + 3] > 0) n++;
+    const cover = n / st.count;
+    // 指が画から離れすぎていないか（軌跡の点のうち、画の近くにある割合）と、進む向きが合っているか
+    const nearest = (p) => { let bi = 0, bd = Infinity; st.pts.forEach((q, i) => { const d = dist(p, q); if (d < bd) { bd = d; bi = i; } }); return { i: bi, d: bd }; };
+    let near = 0, inc = 0, dec = 0, prev = -1;
+    const step = Math.max(1, Math.floor(pts.length / 8));
+    pts.forEach((p, k) => {
+      const q = nearest(p);
+      if (q.d < 70) near++;
+      if (k % step === 0) { if (prev >= 0) { if (q.i >= prev) inc++; else dec++; } prev = q.i; }
+    });
+    const onPath = near / pts.length, dirOK = easy || inc >= dec;
+    const ok = startOK && endOK && dirOK && cover >= NEED[lv] * (easy ? 0.7 : 1) && onPath >= (easy ? 0.5 : 0.7);
+    if (ok) strokeDone(); else redo(startOK);
+  }
+  function strokeDone() {
+    state.si++; state.fails = 0; state.pts = []; hctx.clearRect(0, 0, S, S);
+    meter.style.width = `${Math.round(state.si / state.strokes.length * 100)}%`;
+    drawOrder(null);
+    if (state.si >= state.strokes.length) { finish(); return; }
+    SFX.pop(); say(NTH[state.si] || 'つぎ');
+    demo();
+  }
+  function redo(startOK) {
+    state.fails++; state.pts = []; hctx.clearRect(0, 0, S, S);
+    SFX.wrong(); say(startOK ? 'もういちど' : 'ここから かいてね');
+    demo();
+  }
+
+  // ---------- 共通 ----------
+  function finish() {
+    if (state.done) return;
+    state.done = true;
+    SFX.correct(); cheer('🎉'); celebrate();
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    Baby.say(['できた！', READ[current()] || current()], { delay: 300 }).then(() => state.score % 5 === 0 ? Baby.reward() : null).then(() => setTimeout(next, 500));
+  }
+  function load(intro) {
+    state.done = false; state.drawing = false; cancelAnimationFrame(state.anim);
+    meter.style.width = '0';
+    hctx.clearRect(0, 0, S, S);
+    fit();
+    const ch = current();
+    const name = READ[ch] || ch;
+    if (state.mode === 'order' && STROKES[ch]) {
+      state.strokes = STROKES[ch].map(buildStroke); state.si = 0; state.fails = 0; state.pts = [];
+      drawOrder(null);
+      say(intro ? ['かきじゅんで かいてみよう', name] : name);
+      demo();
+    } else {
+      drawGlyph(ctx, '#d7d7d7');
+      // マスク: 別キャンバスに黒で描いて画素を数える
+      const m = document.createElement('canvas'); m.width = m.height = S;
+      const mc = m.getContext('2d', { willReadFrequently: true });
+      drawGlyph(mc, '#000');
+      const data = mc.getImageData(0, 0, S, S).data;
+      state.mask = new Uint8Array(S * S); state.maskCount = 0;
+      for (let i = 0; i < S * S; i++) if (data[i * 4] < 128) { state.mask[i] = 1; state.maskCount++; }
+      say(name);
     }
   }
   function next() { state.idx = (state.idx + 1) % SETS[state.set].length; load(); }
@@ -128,6 +259,7 @@
     e.preventDefault(); if (state.done) return;
     try { cv.setPointerCapture(e.pointerId); } catch (_) {}
     state.drawing = true; state.last = pos(e);
+    if (state.mode === 'order') { cancelAnimationFrame(state.anim); drawOrder('full'); state.pts = [state.last]; }
     ctx.strokeStyle = '#ff8c42'; ctx.lineWidth = 44; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.beginPath(); ctx.moveTo(state.last.x, state.last.y); ctx.lineTo(state.last.x + 0.1, state.last.y); ctx.stroke();
     hctx.strokeStyle = '#000'; hctx.lineWidth = 130; hctx.lineCap = 'round'; hctx.lineJoin = 'round';
@@ -139,8 +271,13 @@
     ctx.beginPath(); ctx.moveTo(state.last.x, state.last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
     hctx.beginPath(); hctx.moveTo(state.last.x, state.last.y); hctx.lineTo(p.x, p.y); hctx.stroke();
     state.last = p;
+    if (state.mode === 'order') state.pts.push(p);
   });
-  const stop = () => { if (state.drawing) { state.drawing = false; tone({ type: 'sine', f0: 500, dur: 0.06, gain: 0.06 }); progress(); } };
+  const stop = () => {
+    if (!state.drawing) return;
+    state.drawing = false; tone({ type: 'sine', f0: 500, dur: 0.06, gain: 0.06 });
+    if (state.mode === 'order') judgeStroke(); else progress();
+  };
   cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop);
 
   document.getElementById('sets').addEventListener('pointerdown', (e) => {
@@ -149,7 +286,15 @@
     [...b.parentNode.children].forEach(x => x.classList.toggle('on', x === b));
     SFX.pop(); load();
   });
+  document.getElementById('modes').addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.set'); if (!b || b.dataset.mode === state.mode) return; e.preventDefault();
+    state.mode = b.dataset.mode;
+    try { localStorage.setItem('trace.mode', state.mode); } catch (_) {}
+    [...b.parentNode.children].forEach(x => x.classList.toggle('on', x === b));
+    SFX.pop(); load(state.mode === 'order');
+  });
   document.getElementById('next').addEventListener('pointerdown', (e) => { e.preventDefault(); next(); });
+  Baby.preloadVoice(['いちばんめ！', 'にばんめ！', 'さんばんめ！', 'よんばんめ！', 'もういちど', 'ここから かいてね', 'できた！']);
   setupStart(() => setTimeout(load, 300));
   setupHome();
 })();
