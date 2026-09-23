@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff8e1">
-<link rel="stylesheet" href="common.css?v=202609231410">
-<link rel="stylesheet" href="game.css?v=202609231410">
+<link rel="stylesheet" href="common.css?v=202609231416">
+<link rel="stylesheet" href="game.css?v=202609231416">
 <style>
   :root { --tray: calc(112px + env(safe-area-inset-bottom)); }
   html, body { touch-action: pan-x; }   /* common.css の touch-action: none を打ち消す（棚の横スクロール用）。絵の上は #scene 自身が none */
@@ -36,6 +36,12 @@
   .chip { flex: 0 0 auto; width: 84px; height: 84px; border-radius: 18px; background: #fffbe6; box-shadow: 0 3px 0 rgba(0,0,0,.12); display: flex; align-items: center; justify-content: center; }
   .chip:active { transform: scale(.94); }
   .chip.on { box-shadow: 0 0 0 4px #ff8c42, 0 3px 0 rgba(0,0,0,.12); }
+  .chip { position: relative; }
+  .chip .n { position: absolute; right: 4px; bottom: 4px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #ff8c42; color: #fff; font-size: 13px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+  .chip.out { opacity: .45; }
+  .chip.out .n { background: #999; }
+  .chip.shake { animation: shake .3s; }
+  @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
   .chip img { width: 84%; height: 84%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
   .chip.rare { box-shadow: 0 0 0 3px #ffc107, 0 3px 0 rgba(0,0,0,.12); background: #fff8dc; }
   #emptyMsg { flex: 0 0 auto; color: #a07000; font-size: 15px; font-weight: bold; padding: 0 6px; white-space: nowrap; }
@@ -63,8 +69,8 @@
 <button id="shotBtn" class="topbtn right" type="button" aria-label="しゃしん">📷</button>
 <div id="shot"><div class="ttl">できた！ 　えを ながおしすると ほぞんできるよ</div><img alt="シールあそび"><button id="shotClose" type="button">もどる</button></div>
 
-<script src="common.js?v=202609231410"></script>
-<script src="catalog.js?v=202609231410"></script>
+<script src="common.js?v=202609231416"></script>
+<script src="catalog.js?v=202609231416"></script>
 <script>
 (() => {
   'use strict';
@@ -141,6 +147,10 @@
   }
 
   // ---------- シールを貼る（下の棚をタッチ → 真ん中に出る → 指で動かす） ----------
+  // 持っている枚数（種類ごと）と、いま貼ってある枚数（全部の背景を合わせて）。残りが 0 なら貼れない
+  const ownedCount = (id) => d.stickers.filter(s => s.id === id).length;
+  const usedCount = (id) => Object.values(d.seal.boards).reduce((n, b) => n + b.filter(it => it.id === id).length, 0);
+  const remain = (id) => Math.max(0, ownedCount(id) - usedCount(id));
   function buildTray() {
     tray.innerHTML = '';
     const owned = new Set(d.stickers.map(s => s.id));
@@ -152,8 +162,17 @@
     ids.forEach(id => {
       const c = document.createElement('div');
       c.className = 'chip' + (Baby.RARE.includes(id) ? ' rare' : ''); c.dataset.id = id;
-      c.innerHTML = `<img src="assets/${id}.png" alt="">`;
+      c.innerHTML = `<img src="assets/${id}.png" alt=""><span class="n"></span>`;
       tray.appendChild(c);
+    });
+    refreshTray();
+  }
+  // 残り枚数の表示だけ更新する（棚のスクロール位置を保つため作り直さない）
+  function refreshTray() {
+    tray.querySelectorAll('.chip').forEach(c => {
+      const r = remain(c.dataset.id);
+      c.querySelector('.n').textContent = `×${r}`;
+      c.classList.toggle('out', r === 0);
     });
   }
   // 棚のタップは click で受ける（横スクロールと区別してくれる。iPhone では pointerup が来ないことがある）
@@ -175,6 +194,12 @@
     addSeal(c.dataset.id);
   });
   function addSeal(id) {
+    if (remain(id) <= 0) {
+      const c = tray.querySelector(`.chip[data-id="${id}"]`);
+      if (c) { c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); }
+      SFX.wrong(); say('もう ないよ');
+      return;
+    }
     const items = board();
     // 真ん中あたりに、少しずつずらして出す（重なりっぱなしにならないように）
     const n = items.length;
@@ -185,6 +210,7 @@
     SFX.pop();
     const r = box(); burst(r.left + it.x * r.width, r.top + it.y * r.height, 6);
     say(NAMES[id] || 'シール');
+    refreshTray();
   }
 
   // ---------- 動かす・選ぶ ----------
@@ -217,7 +243,7 @@
     if (act === 'big') it.s = Math.min(0.6, it.s * 1.25);
     else if (act === 'small') it.s = Math.max(0.1, it.s / 1.25);
     else if (act === 'flip') it.f = it.f ? 0 : 1;
-    else if (act === 'del') { items.splice(state.sel, 1); persist(); render(); select(null); SFX.pop(); return; }
+    else if (act === 'del') { items.splice(state.sel, 1); persist(); render(); select(null); refreshTray(); SFX.pop(); return; }
     persist(); SFX.pop();
     const el = scene.querySelector(`.seal[data-i="${state.sel}"]`);
     el.classList.toggle('flip', !!it.f); place(el, it);
@@ -256,7 +282,7 @@
 
   buildTray();
   showScene(d.seal.scene, false);
-  Baby.preloadVoice(['すきな シールを はろう！', 'しゃしんを とったよ！']);
+  Baby.preloadVoice(['すきな シールを はろう！', 'しゃしんを とったよ！', 'もう ないよ']);
   say('すきな シールを はろう！', { delay: 400 });
   setupHome();
 })();
