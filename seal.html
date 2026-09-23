@@ -8,15 +8,15 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff8e1">
-<link rel="stylesheet" href="common.css?v=202609231357">
-<link rel="stylesheet" href="game.css?v=202609231357">
+<link rel="stylesheet" href="common.css?v=202609231405">
+<link rel="stylesheet" href="game.css?v=202609231405">
 <style>
   :root { --tray: calc(112px + env(safe-area-inset-bottom)); }
   body { background: #fff8e1; overflow: hidden; }
   /* 背景の絵。シールはこの上に絶対配置 */
   #scene { position: fixed; left: 0; right: 0; top: 0; bottom: var(--tray); overflow: hidden; touch-action: none; background: linear-gradient(180deg, #bfe3ff 0%, #e8f6ff 60%, #c8e6a0 60%, #a5d17a 100%); }
   #scene img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; user-select: none; -webkit-user-drag: none; }
-  .seal { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; /* common.css の img { pointer-events: none } を打ち消す */ user-select: none; -webkit-user-drag: none; touch-action: none; filter: drop-shadow(0 3px 2px rgba(0,0,0,.25)); }
+  .seal { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; /* common.css の img { pointer-events: none } を打ち消す */ user-select: none; -webkit-user-drag: none; touch-action: none; will-change: left, top; -webkit-backface-visibility: hidden; backface-visibility: hidden; }   /* 影（filter）は Safari で動かした跡が残るので付けない */
   .seal.flip { transform: translate(-50%, -50%) scaleX(-1); }
   .seal.sel { outline: 4px dashed #ff8c42; outline-offset: 6px; border-radius: 14px; }
   .seal.pop { animation: pop .35s ease-out; }
@@ -34,10 +34,9 @@
   #tray { position: fixed; left: 0; right: 0; bottom: 0; height: var(--tray); box-sizing: border-box; padding: 10px 10px calc(env(safe-area-inset-bottom) + 10px); background: rgba(255,255,255,.95); box-shadow: 0 -2px 8px rgba(0,0,0,.08); display: flex; gap: 8px; align-items: center; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; -webkit-overflow-scrolling: touch; }
   .chip { flex: 0 0 auto; width: 84px; height: 84px; border-radius: 18px; background: #fffbe6; box-shadow: 0 3px 0 rgba(0,0,0,.12); display: flex; align-items: center; justify-content: center; }
   .chip:active { transform: scale(.94); }
+  .chip.on { box-shadow: 0 0 0 4px #ff8c42, 0 3px 0 rgba(0,0,0,.12); }
   .chip img { width: 84%; height: 84%; object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
   .chip.rare { box-shadow: 0 0 0 3px #ffc107, 0 3px 0 rgba(0,0,0,.12); background: #fff8dc; }
-  .chip.empty { background: rgba(0,0,0,.05); box-shadow: inset 0 0 0 3px rgba(0,0,0,.08); }
-  .chip.empty::after { content: '？'; font-size: 30px; color: rgba(0,0,0,.18); font-weight: bold; }
   #emptyMsg { flex: 0 0 auto; color: #a07000; font-size: 15px; font-weight: bold; padding: 0 6px; white-space: nowrap; }
   /* しゃしん */
   #shot { position: fixed; inset: 0; z-index: 45; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: rgba(60,60,80,.92); padding: 16px; }
@@ -63,8 +62,8 @@
 <button id="shotBtn" class="topbtn right" type="button" aria-label="しゃしん">📷</button>
 <div id="shot"><div class="ttl">できた！ 　えを ながおしすると ほぞんできるよ</div><img alt="シールあそび"><button id="shotClose" type="button">もどる</button></div>
 
-<script src="common.js?v=202609231357"></script>
-<script src="catalog.js?v=202609231357"></script>
+<script src="common.js?v=202609231405"></script>
+<script src="catalog.js?v=202609231405"></script>
 <script>
 (() => {
   'use strict';
@@ -155,19 +154,13 @@
       c.innerHTML = `<img src="assets/${id}.png" alt="">`;
       tray.appendChild(c);
     });
-    for (let i = ids.length; i < Math.min(Baby.STICKERS.length, ids.length + 3); i++) {
-      const c = document.createElement('div'); c.className = 'chip empty'; tray.appendChild(c);
-    }
   }
-  // 棚は横にスクロールするので、動かさずに離したときだけ「貼る」
-  let tap = null;
-  tray.addEventListener('pointerdown', (e) => { const c = e.target.closest('.chip'); tap = c ? { c, x: e.clientX, y: e.clientY } : null; ensureAudio(); });
-  tray.addEventListener('pointerup', (e) => {
-    if (!tap) return;
-    const moved = Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 10;
-    const c = tap.c; tap = null;
-    if (moved) return;
-    if (c.classList.contains('empty')) { SFX.pop(); return; }
+  // 棚のタップは click で受ける（横スクロールと区別してくれる。iPhone では pointerup が来ないことがある）
+  tray.addEventListener('pointerdown', () => ensureAudio());
+  tray.addEventListener('click', (e) => {
+    const c = e.target.closest('.chip'); if (!c) return;
+    [...tray.querySelectorAll('.chip')].forEach(x => x.classList.toggle('on', x === c));
+    setTimeout(() => c.classList.remove('on'), 600);
     addSeal(c.dataset.id);
   });
   function addSeal(id) {
