@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>つみき</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#fff3e0">
+<link rel="stylesheet" href="common.css?v=202609261636">
+<link rel="stylesheet" href="game.css?v=202609261636">
+<style>
+  body { background: linear-gradient(180deg, #fff3e0 0%, #ffffff 100%); }
+
+  #left { text-align: center; font-size: 22px; font-weight: bold; color: #e65100; min-height: 30px; }
+  #field { flex: 1; min-height: 0; position: relative; border-radius: 28px; background: linear-gradient(180deg, #e3f2fd 0%, #f1f8e9 100%); overflow: hidden; touch-action: none; box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  #field canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+  /* 下の棚: つみきを選ぶ */
+  #tray { flex-shrink: 0; height: 96px; display: flex; gap: 10px; justify-content: center; align-items: stretch; }
+  .blk { flex: 1; max-width: 110px; min-width: 0; border: none; border-radius: 20px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); touch-action: none; display: flex; align-items: center; justify-content: center; padding: 8px; font-family: inherit; }
+  .blk .pic { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; } .blk .pic img { width: 100%; height: 100%; object-fit: contain; } .blk .pic.emoji { font-size: 44px; }
+  .blk.hold { transform: scale(0.94); background: #fff6b3; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">🧱</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">つみきを つもう</div>
+  <div class="stars" id="stars"></div>
+  <div id="left"></div>
+  <div id="field"><canvas id="cv"></canvas></div>
+  <div id="tray"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js?v=202609261636"></script>
+<script src="blocks_sim.js?v=202609261636"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, burst, cheer, celebrate, setupStart, setupHome } = Baby;
+  const T = DrawTower;
+  const field = document.getElementById('field'), cv = document.getElementById('cv'), g = cv.getContext('2d');
+  const tray = document.getElementById('tray'), left = document.getElementById('left'), stars = document.getElementById('stars');
+  const LT = T.LT;
+
+  // ---------- つみきの形（世界の単位。中心が 0,0。線の太さ LT ぶん外側に広がる） ----------
+  const rect = (w, h) => [{ x: -w / 2, y: -h / 2 }, { x: w / 2, y: -h / 2 }, { x: w / 2, y: h / 2 }, { x: -w / 2, y: h / 2 }, { x: -w / 2, y: -h / 2 }];
+  const poly = (r, n) => { const a = []; for (let i = 0; i <= n; i++) { const t = i % n / n * Math.PI * 2; a.push({ x: Math.round(Math.cos(t) * r * 100) / 100, y: Math.round(Math.sin(t) * r * 100) / 100 }); } return a; };
+  const SHAPES = {
+    square:   { emoji: '🟧', pts: rect(60, 60) },
+    rect:     { emoji: '🟫', pts: rect(136, 58) },
+    triangle: { emoji: '🔺', pts: [{ x: -42, y: 36 }, { x: 42, y: 36 }, { x: 0, y: -36 }, { x: -42, y: 36 }] },
+    circle:   { emoji: '🟠', pts: poly(32, 28) },
+  };
+  for (const [id, s] of Object.entries(SHAPES)) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of s.pts) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+    s.box = { x0: x0 - LT, y0: y0 - LT, w: x1 - x0 + 2 * LT, h: y1 - y0 + 2 * LT };
+    s.img = new Image(); s.img.src = `assets/blocks/${id}.png`;
+    s.img.onload = () => { s.crop = alphaBox(s.img); };
+    s.img.onerror = () => { s.img = null; };
+  }
+  // 絵の中で色のついている範囲（透明な余白を除いて、つみきの形にぴったり合わせる）
+  function alphaBox(img) {
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const cg = c.getContext('2d'); cg.drawImage(img, 0, 0);
+    const d = cg.getImageData(0, 0, c.width, c.height).data;
+    let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0;
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+      if (d[(y * c.width + x) * 4 + 3] > 40) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    return x1 < x0 ? { x: 0, y: 0, w: c.width, h: c.height } : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  }
+
+  // ---------- 状態 ----------
+  const state = { world: T.createWorld(), target: 3, busy: false, score: Baby.getLevel(), drag: null, acc: 0, last: 0, camY: 0, fellAt: -10 };
+  const shapeOf = new Map();   // 物 → 形
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+  function newRound() {
+    state.world = T.createWorld(); shapeOf.clear(); state.busy = false; state.camY = 0;
+    state.target = [0, 3, 4, 5, 6, 8][Baby.level()];
+    showLeft();
+    Baby.prime(['おっこちた！ もういちど', 'ぜんぶ つめた！ すごい！']);
+    say('つみきを えらんで うえに つもう');
+  }
+  const stacked = () => state.world.bodies.filter(b => !b.static).length;
+  function showLeft() {
+    const n = state.target - stacked();
+    left.textContent = n > 0 ? `あと ${n}こ` : 'つめた！';
+  }
+
+  // ---------- 画面と世界の対応 ----------
+  let W = 0, H = 0, scale = 1, groundPx = 0;
+  function fit() {
+    const r = field.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+    W = r.width; H = r.height; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    scale = W / T.W; groundPx = H - 40;
+  }
+  new ResizeObserver(fit).observe(field); fit();
+  const sx = x => x * scale, sy = y => groundPx + (y + state.camY) * scale;
+  const toWorld = (cx, cy) => { const r = field.getBoundingClientRect(); return { x: (cx - r.left) / scale, y: (cy - r.top - groundPx) / scale - state.camY }; };
+
+  // ---------- 描画 ----------
+  function drawBody(b) {
+    const s = shapeOf.get(b);
+    g.save(); g.translate(sx(b.x), sy(b.y)); g.rotate(b.th); g.scale(scale, scale);
+    if (s && s.img && s.crop) g.drawImage(s.img, s.crop.x, s.crop.y, s.crop.w, s.crop.h, s.box.x0, s.box.y0, s.box.w, s.box.h);
+    else {
+      g.lineWidth = LT * 2; g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = '#ffb74d'; g.fillStyle = '#ffe0b2';
+      g.beginPath(); b.stroke.forEach((p, i) => i ? g.lineTo(p.x - b.stroke0.x, p.y - b.stroke0.y) : g.moveTo(p.x - b.stroke0.x, p.y - b.stroke0.y)); g.fill(); g.stroke();
+    }
+    g.restore();
+  }
+  function render() {
+    g.clearRect(0, 0, W, H);
+    // 台
+    g.fillStyle = '#a1887f'; g.fillRect(sx(T.PLAT_X0), sy(0), sx(T.PLAT_X1) - sx(T.PLAT_X0), 14 * scale);
+    g.fillStyle = '#8d6e63'; g.fillRect(sx(T.PLAT_X0) + 12 * scale, sy(0) + 14 * scale, 18 * scale, H);
+    g.fillRect(sx(T.PLAT_X1) - 30 * scale, sy(0) + 14 * scale, 18 * scale, H);
+    // 落とす線
+    const line = T.dropLineY(state.world);
+    g.setLineDash([8, 8]); g.strokeStyle = 'rgba(0,0,0,.15)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(0, sy(line)); g.lineTo(W, sy(line)); g.stroke(); g.setLineDash([]);
+    for (const b of state.world.bodies) if (!b.static) drawBody(b);
+    // つかんでいる つみき（半透明）
+    const d = state.drag;
+    if (d && d.inField) {
+      const s = SHAPES[d.shape];
+      g.save(); g.globalAlpha = 0.6; g.translate(sx(d.x), sy(d.y)); g.scale(scale, scale);
+      if (s.img && s.crop) g.drawImage(s.img, s.crop.x, s.crop.y, s.crop.w, s.crop.h, s.box.x0, s.box.y0, s.box.w, s.box.h);
+      else { g.lineWidth = LT * 2; g.strokeStyle = '#ffb74d'; g.fillStyle = '#ffe0b2'; g.beginPath(); s.pts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.fill(); g.stroke(); }
+      g.restore();
+    }
+  }
+
+  // ---------- 進行 ----------
+  function frame(t) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (t - state.last) / 1000 || 0); state.last = t;
+    state.acc += dt;
+    let n = 0;
+    while (state.acc >= T.DT && n++ < 16) { T.step(state.world, T.DT); state.acc -= T.DT; }
+    const w = state.world;
+    if (w.lastFell && w.lastFell.length) {
+      w.lastFell = null; SFX.pop();
+      if (w.t - state.fellAt > 2) { state.fellAt = w.t; say('おっこちた！ もういちど'); }
+      showLeft();
+    }
+    // カメラ: タワーが高くなったら 上へ
+    const top = T.towerHeight(w, true);
+    const want = Math.max(0, top + 230 - (groundPx - 10) / scale);
+    state.camY += (want - state.camY) * 0.08;
+    if (!state.busy && w.pieces > 0 && stacked() >= state.target && T.settled(w)) {
+      state.busy = true; state.drag = null;
+      SFX.correct(); cheer('🎉'); celebrate();
+      say('ぜんぶ つめた！ すごい！', { delay: 300 }).then(() => win(() => setTimeout(newRound, 400)));
+    }
+    render();
+  }
+  requestAnimationFrame(frame);
+  // テスト用: 拡張のテストでは rAF が止まるので、秒数ぶん物理だけ進める
+  window.ff = (sec) => { for (let i = 0; i < sec / T.DT; i++) T.step(state.world, T.DT); frame(state.last + 1); return T.settled(state.world); };
+
+  // ---------- 棚から つかんで 置く ----------
+  for (const [id, s] of Object.entries(SHAPES)) {
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'blk'; btn.dataset.shape = id;
+    btn.appendChild(Baby.pic(`assets/blocks/${id}.png`, s.emoji));
+    btn.addEventListener('pointerdown', (e) => {
+      if (state.busy || state.drag) return;
+      e.preventDefault();
+      btn.classList.add('hold');
+      state.drag = { shape: id, btn, x: T.W / 2, y: T.dropLineY(state.world) - 60, inField: false, id: e.pointerId };
+      SFX.tap && SFX.tap();
+    });
+    tray.appendChild(btn);
+  }
+  function move(e) {
+    const d = state.drag; if (!d || e.pointerId !== d.id) return;
+    e.preventDefault();
+    const r = field.getBoundingClientRect();
+    d.inField = e.clientY < r.bottom;
+    const p = toWorld(e.clientX, Math.min(e.clientY, r.bottom));
+    const s = SHAPES[d.shape];
+    d.x = Math.max(-s.box.x0 + 4, Math.min(T.W - s.box.x0 - 4, p.x));
+    d.y = Math.min(p.y, T.dropLineY(state.world) - s.box.h / 2);
+  }
+  function drop(e) {
+    const d = state.drag; if (!d || e.pointerId !== d.id) return;
+    e.preventDefault();
+    d.btn.classList.remove('hold'); state.drag = null;
+    if (state.busy) return;
+    const s = SHAPES[d.shape];
+    const x = d.inField ? d.x : T.W / 2, y = d.inField ? d.y : T.dropLineY(state.world) - s.box.h / 2;
+    const stroke = s.pts.map(p => ({ x: Math.round(p.x + x), y: Math.round(p.y + y) }));
+    const b = T.addPiece(state.world, T.placeStroke(state.world, stroke));
+    b.stroke0 = { x: b.x, y: b.y };
+    shapeOf.set(b, s);
+    showLeft();
+  }
+  document.addEventListener('pointermove', move, { passive: false });
+  document.addEventListener('pointerup', drop);
+  document.addEventListener('pointercancel', drop);
+
+  setupStart(() => setTimeout(newRound, 300));
+  setupHome();
+})();
+</script>
+</body>
+</html>

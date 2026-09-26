@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ボールころがし</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#e8f5e9">
+<link rel="stylesheet" href="common.css?v=202609261636">
+<link rel="stylesheet" href="game.css?v=202609261636">
+<style>
+  body { background: linear-gradient(180deg, #e8f5e9 0%, #ffffff 100%); }
+
+  #field { flex: 1; min-height: 0; position: relative; border-radius: 28px; background: linear-gradient(180deg, #e1f5fe 0%, #fffde7 100%); overflow: hidden; touch-action: none; box-shadow: 0 6px 0 rgba(0,0,0,.08); }
+  #field canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
+  /* 下の棚: 板を選ぶ ＋ ころがす */
+  #tray { flex-shrink: 0; height: 84px; display: flex; gap: 10px; justify-content: center; align-items: stretch; }
+  .plk { flex: 1; max-width: 96px; min-width: 0; border: none; border-radius: 20px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); touch-action: none; display: flex; align-items: center; justify-content: center; padding: 6px; font-family: inherit; }
+  .plk canvas { width: 100%; height: 100%; }
+  .plk.hold { transform: scale(0.94); background: #fff6b3; }
+  #go { flex: 1.3; max-width: 150px; border: none; border-radius: 20px; background: #ffd84d; font-size: min(20px, 5vw); white-space: nowrap; font-weight: bold; color: #345; font-family: inherit; box-shadow: 0 6px 0 rgba(0,0,0,.12); touch-action: none; }
+  #go:disabled { opacity: .45; }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">⚽</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question">カゴまで ころがそう</div>
+  <div class="stars" id="stars"></div>
+  <div id="field"><canvas id="cv"></canvas></div>
+  <div id="tray"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+
+<script src="common.js?v=202609261636"></script>
+<script>
+(() => {
+  'use strict';
+
+  const { SFX, say, burst, cheer, celebrate, setupStart, setupHome, tone } = Baby;
+  const field = document.getElementById('field'), cv = document.getElementById('cv'), g = cv.getContext('2d');
+  const tray = document.getElementById('tray'), stars = document.getElementById('stars');
+
+  // ---------- 世界（幅 600。高さは画面の形に合わせる） ----------
+  const WW = 600;
+  const R = 22;              // ボールの半径
+  const HT = 9;              // 板の半分の厚み
+  const PL = 170;            // 板の長さ
+  const G = 1100, E = 0.25;  // 重力・はねかえり
+  const TILT = 0.42;         // 板の傾き（rad ≈ 24°）
+  const KINDS = [{ id: 'down', a: TILT }, { id: 'flat', a: 0 }, { id: 'up', a: -TILT }];   // ＼ ─ ／
+  const IMG = {};
+  for (const [k, src] of Object.entries({ ball: 'assets/blocks/ball.png', plank: 'assets/blocks/plank.png', basket: 'assets/misc/basket.png', rock: 'assets/misc/rock.png' })) {
+    const im = new Image(); im.src = src; im.onload = () => { im.crop = alphaBox(im); IMG[k] = im; }; im.onerror = () => {};
+  }
+  // 絵の中で色のついている範囲（透明な余白を除いて、板やボールの大きさにぴったり合わせる）
+  function alphaBox(img) {
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const cg = c.getContext('2d'); cg.drawImage(img, 0, 0);
+    const d = cg.getImageData(0, 0, c.width, c.height).data;
+    let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0;
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+      if (d[(y * c.width + x) * 4 + 3] > 40) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    return x1 < x0 ? { x: 0, y: 0, w: c.width, h: c.height } : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  }
+  // 絵を 余白を除いて (x, y) 中心・幅 w に描く（高さは絵の形のまま。h を渡せばその高さ）
+  function di(ctx, im, x, y, w, h) { const c = im.crop; if (!h) h = w * c.h / c.w; ctx.drawImage(im, c.x, c.y, c.w, c.h, x - w / 2, y - h / 2, w, h); }
+
+  const state = { planks: [], ball: null, rolling: false, busy: false, score: Baby.getLevel(), drag: null, stage: null, WH: 800, last: 0, acc: 0, rollT: 0, stuckT: 0 };
+
+  function win(after) {
+    state.score++; Baby.setLevel(state.score);
+    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+  }
+
+  // ---------- 画面と世界の対応 ----------
+  let W = 0, H = 0, scale = 1;
+  function fit() {
+    const r = field.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1);
+    W = r.width; H = r.height; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    scale = W / WW; state.WH = H / scale;
+  }
+  new ResizeObserver(fit).observe(field); fit();
+  const toWorld = (cx, cy) => { const r = field.getBoundingClientRect(); return { x: (cx - r.left) / scale, y: (cy - r.top) / scale }; };
+
+  // ---------- ステージ ----------
+  // ledge: ボールが乗っている棚（左上か右上）。basket: カゴの中心 x と口の y。rocks: じゃまな岩
+  function makeStage() {
+    const lv = Math.min(5, Baby.level()), WH = state.WH;
+    const left = lv <= 2 ? true : Math.random() < 0.5;
+    const ledgeX = left ? 70 : WW - 70, ledgeY = 90;
+    let bx;
+    if (lv === 1) bx = left ? 300 + Math.random() * 80 : WW - 300 - Math.random() * 80;         // 棚の下に ＼ を 1 まい置けば届く
+    else if (lv === 2) bx = left ? 420 + Math.random() * 120 : WW - 420 - Math.random() * 120;  // 遠い（板 2 まい）
+    else bx = 90 + Math.random() * (WW - 180);
+    const by = WH - 40;
+    const rocks = [];
+    if (lv >= 4) rocks.push({ x: (ledgeX + bx) / 2 + (Math.random() - 0.5) * 80, y: (ledgeY + by) / 2 + (Math.random() - 0.5) * 60, r: 42 });
+    if (lv >= 5) rocks.push({ x: 90 + Math.random() * (WW - 180), y: ledgeY + 120 + Math.random() * (by - ledgeY - 260), r: 34 });
+    return { ledgeX, ledgeY, left, bx, by, rocks };
+  }
+  function resetBall() {
+    const s = state.stage;
+    state.ball = { x: s.ledgeX - (s.left ? 30 : -30), y: s.ledgeY - HT - R - 8, vx: 0, vy: 0, rot: 0 };
+    state.rolling = false; state.rollT = 0; state.stuckT = 0;
+    go.disabled = false;
+  }
+  function newRound() {
+    state.busy = false; state.planks = []; state.drag = null;
+    state.stage = makeStage(); resetBall();
+    Baby.prime(['ころがす！', 'カゴに はいった！ やったね！', 'おっこちた。 いたを うごかして もういちど']);
+    say('いたを おいて ボールを カゴまで ころがそう');
+  }
+
+  // ---------- 物理（ボール = 円、板 = 太い線分、岩 = 円） ----------
+  // 棚は 少しだけ 中央へ傾いている（ボールが自然に転がり出す）
+  const LEDGE_A = 0.18;
+  function ledgeSeg(s) { const a = s.left ? LEDGE_A : -LEDGE_A; return segOf({ x: s.ledgeX, y: s.ledgeY, a, len: 120 }); }
+  function segOf(p) { const l = p.len || PL, c = Math.cos(p.a) * l / 2, s = Math.sin(p.a) * l / 2; return { ax: p.x - c, ay: p.y - s, bx: p.x + c, by: p.y + s }; }
+  function hitSeg(b, s, rad) {
+    const dx = s.bx - s.ax, dy = s.by - s.ay, l2 = dx * dx + dy * dy;
+    let u = l2 ? ((b.x - s.ax) * dx + (b.y - s.ay) * dy) / l2 : 0; u = Math.max(0, Math.min(1, u));
+    const qx = s.ax + dx * u, qy = s.ay + dy * u, ex = b.x - qx, ey = b.y - qy, d = Math.hypot(ex, ey), pen = rad - d;
+    if (pen <= 0) return false;
+    const nx = d > 1e-6 ? ex / d : 0, ny = d > 1e-6 ? ey / d : -1;
+    b.x += nx * pen; b.y += ny * pen;
+    const vn = b.vx * nx + b.vy * ny;
+    if (vn < 0) { b.vx -= (1 + E) * vn * nx; b.vy -= (1 + E) * vn * ny; if (vn < -180) SFX.pop(); }
+    // ころがる（接している間は少しずつ遅くなる）
+    const tx = -ny, ty = nx, vt = b.vx * tx + b.vy * ty, f = vt * 0.04;
+    b.vx -= f * tx; b.vy -= f * ty;
+    b.rot += vt / R * (1 / 120);
+    return true;
+  }
+  function hitCircle(b, c) {
+    const ex = b.x - c.x, ey = b.y - c.y, d = Math.hypot(ex, ey), pen = R + c.r - d;
+    if (pen <= 0) return;
+    const nx = ex / (d || 1), ny = ey / (d || 1);
+    b.x += nx * pen; b.y += ny * pen;
+    const vn = b.vx * nx + b.vy * ny;
+    if (vn < 0) { b.vx -= (1 + E) * vn * nx; b.vy -= (1 + E) * vn * ny; }
+  }
+  function stepBall(dt) {
+    const b = state.ball, s = state.stage;
+    b.vy += G * dt;
+    b.x += b.vx * dt; b.y += b.vy * dt;
+    let touching = false;
+    for (const p of state.planks) if (hitSeg(b, segOf(p), R + HT)) touching = true;
+    if (hitSeg(b, ledgeSeg(s), R + HT)) touching = true;
+    for (const c of s.rocks) hitCircle(b, c);
+    // カゴのふち（左右の壁）
+    for (const sx of [s.bx - 52, s.bx + 52]) hitSeg(b, { ax: sx, ay: s.by, bx: sx, by: s.by + 50 }, R + 4);
+    // 左右のかべ
+    if (b.x < R) { b.x = R; b.vx = Math.abs(b.vx) * E; }
+    if (b.x > WW - R) { b.x = WW - R; b.vx = -Math.abs(b.vx) * E; }
+    if (b.y < R) { b.y = R; b.vy = Math.abs(b.vy) * E; }
+    if (!touching) b.rot += b.vx / R * dt;
+    // カゴに入った？
+    if (b.y > s.by + 6 && b.x > s.bx - 48 && b.x < s.bx + 48 && b.vy >= 0) return 'in';
+    if (b.y > state.WH + R * 2) return 'out';
+    // 止まっちゃった？
+    if (Math.hypot(b.vx, b.vy) < 8) { state.stuckT += dt; if (state.stuckT > 1.6) return 'stuck'; } else state.stuckT = 0;
+    return null;
+  }
+
+  // ---------- 描画 ----------
+  function drawPlank(p, alpha, len = PL) {
+    g.save(); g.globalAlpha = alpha; g.translate(p.x * scale, p.y * scale); g.rotate(p.a); g.scale(scale, scale);
+    if (IMG.plank) di(g, IMG.plank, 0, 0, len + 6, HT * 2 + 8);
+    else { g.fillStyle = '#c69c6d'; g.strokeStyle = '#8d6e63'; g.lineWidth = 3; g.beginPath(); g.roundRect(-len / 2, -HT, len, HT * 2, 6); g.fill(); g.stroke(); }
+    g.restore();
+  }
+  function render() {
+    const s = state.stage; if (!s) return;
+    g.clearRect(0, 0, W, H);
+    // 棚
+    drawPlank({ x: s.ledgeX, y: s.ledgeY, a: s.left ? LEDGE_A : -LEDGE_A }, 1, 120);
+    // 岩
+    for (const c of s.rocks) {
+      if (IMG.rock) di(g, IMG.rock, c.x * scale, c.y * scale, c.r * 2.2 * scale, c.r * 2.2 * scale);
+      else { g.fillStyle = '#9e9e9e'; g.beginPath(); g.arc(c.x * scale, c.y * scale, c.r * scale, 0, Math.PI * 2); g.fill(); }
+    }
+    // 板
+    for (const p of state.planks) drawPlank(p, state.drag && state.drag.plank === p ? 0.7 : 1);
+    if (state.drag && !state.drag.plank && state.drag.inField) drawPlank(state.drag, 0.6);
+    // カゴ
+    const bw = 120;
+    if (IMG.basket) di(g, IMG.basket, s.bx * scale, (s.by + 4) * scale, bw * scale);
+    else { g.fillStyle = '#d7a86e'; g.fillRect((s.bx - 56) * scale, s.by * scale, 112 * scale, 60 * scale); }
+    // ボール
+    const b = state.ball;
+    g.save(); g.translate(b.x * scale, b.y * scale); g.rotate(b.rot);
+    if (IMG.ball) di(g, IMG.ball, 0, 0, R * 2.1 * scale, R * 2.1 * scale);
+    else { g.fillStyle = '#ef5350'; g.beginPath(); g.arc(0, 0, R * scale, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(R * 0.4 * scale, 0, R * 0.25 * scale, 0, Math.PI * 2); g.fill(); }
+    g.restore();
+  }
+
+  // ---------- 進行 ----------
+  function frame(t) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (t - state.last) / 1000 || 0); state.last = t;
+    if (state.rolling && !state.busy) {
+      state.acc += dt; let res = null;
+      while (state.acc >= 1 / 120 && !res) { res = stepBall(1 / 120); state.acc -= 1 / 120; }
+      if (res) finish(res);
+    }
+    render();
+  }
+  function finish(res) {
+    state.rolling = false;
+    if (res === 'in') {
+      state.busy = true; SFX.correct(); cheer('🎉'); celebrate();
+      say('カゴに はいった！ やったね！', { delay: 300 }).then(() => win(() => setTimeout(newRound, 400)));
+    } else {
+      SFX.wrong && SFX.wrong();
+      say(res === 'out' ? 'おっこちた。 いたを うごかして もういちど' : 'とまっちゃった。 いたを うごかして もういちど').then(resetBall);
+    }
+  }
+  requestAnimationFrame(frame);
+  // テスト用: 拡張のテストでは rAF が止まるので、秒数ぶん物理だけ進める
+  window._state = state;
+  window.ff = (sec) => { let res = null; for (let i = 0; i < sec * 120 && state.rolling && !res; i++) res = stepBall(1 / 120); if (res) finish(res); render(); return res; };
+
+  // ---------- 板を つかむ・おく・うごかす ----------
+  const go = document.createElement('button'); go.id = 'go'; go.type = 'button'; go.textContent = 'ころがす！';
+  for (const k of KINDS) {
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'plk'; btn.dataset.kind = k.id;
+    const c = document.createElement('canvas'); c.width = 160; c.height = 120; btn.appendChild(c);
+    const cg = c.getContext('2d');
+    const paint = () => { cg.clearRect(0, 0, 160, 120); cg.save(); cg.translate(80, 60); cg.rotate(k.a); if (IMG.plank) di(cg, IMG.plank, 0, 0, 132, 26); else { cg.fillStyle = '#c69c6d'; cg.fillRect(-66, -8, 132, 16); } cg.restore(); };
+    paint(); setTimeout(paint, 800); setTimeout(paint, 3000);
+    btn.addEventListener('pointerdown', (e) => {
+      if (state.busy || state.rolling || state.drag) return;
+      e.preventDefault(); btn.classList.add('hold');
+      state.drag = { a: k.a, x: WW / 2, y: state.WH / 2, inField: false, id: e.pointerId, btn, plank: null };
+    });
+    tray.appendChild(btn);
+  }
+  tray.appendChild(go);
+  // 置いた板を つかむ
+  field.addEventListener('pointerdown', (e) => {
+    if (state.busy || state.rolling || state.drag) return;
+    const p = toWorld(e.clientX, e.clientY);
+    let best = null, bd = 40;
+    for (const pl of state.planks) {
+      const s = segOf(pl), dx = s.bx - s.ax, dy = s.by - s.ay, l2 = dx * dx + dy * dy;
+      let u = ((p.x - s.ax) * dx + (p.y - s.ay) * dy) / l2; u = Math.max(0, Math.min(1, u));
+      const d = Math.hypot(p.x - (s.ax + dx * u), p.y - (s.ay + dy * u));
+      if (d < bd) { bd = d; best = pl; }
+    }
+    if (!best) return;
+    e.preventDefault();
+    state.drag = { a: best.a, x: best.x, y: best.y, inField: true, id: e.pointerId, btn: null, plank: best, ox: best.x - p.x, oy: best.y - p.y };
+  });
+  function move(e) {
+    const d = state.drag; if (!d || e.pointerId !== d.id) return;
+    e.preventDefault();
+    const r = field.getBoundingClientRect();
+    d.inField = e.clientY < r.bottom;
+    const p = toWorld(e.clientX, Math.min(e.clientY, r.bottom));
+    d.x = Math.max(30, Math.min(WW - 30, p.x + (d.ox || 0))); d.y = Math.max(30, Math.min(state.WH - 30, p.y + (d.oy || 0)));
+    if (d.plank) { d.plank.x = d.x; d.plank.y = d.y; }
+  }
+  function drop(e) {
+    const d = state.drag; if (!d || e.pointerId !== d.id) return;
+    e.preventDefault();
+    if (d.btn) d.btn.classList.remove('hold');
+    state.drag = null;
+    if (state.busy) return;
+    if (d.plank) {
+      // 棚まで戻したら 片づける
+      if (!d.inField) { state.planks = state.planks.filter(p => p !== d.plank); SFX.pop(); }
+      return;
+    }
+    if (!d.inField) return;
+    if (state.planks.length >= 6) state.planks.shift();
+    state.planks.push({ x: d.x, y: d.y, a: d.a });
+    tone({ f0: 500, dur: 0.08, gain: 0.15 });
+  }
+  document.addEventListener('pointermove', move, { passive: false });
+  document.addEventListener('pointerup', drop);
+  document.addEventListener('pointercancel', drop);
+  go.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (state.busy || state.rolling || state.drag || !state.stage) return;
+    if (!state.planks.length) { say('いたを おいてね'); return; }
+    go.disabled = true;
+    say('ころがす！');
+    const s = state.stage; state.ball.vx = s.left ? 60 : -60; state.rolling = true; state.acc = 0;
+  });
+
+  setupStart(() => setTimeout(newRound, 300));
+  setupHome();
+})();
+</script>
+</body>
+</html>

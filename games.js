@@ -55,6 +55,7 @@ window.GAMES = [
   { id: 'janken',   icon: '✊', name: 'じゃんけん',     cat: 'ugoki' },
   { id: 'rhythm',   icon: '🥁', name: 'リズムたたき',   cat: 'ugoki' },
   { id: 'jump',     icon: '🦘', name: 'かぞえてジャンプ', cat: 'ugoki' },
+  { id: 'roll',     icon: '⚽', name: 'ボールころがし', cat: 'ugoki' },
   // つくる
   { id: 'coloring', icon: '🖍️', name: 'ぬりえ',         cat: 'tsukuru' },
   { id: 'seal',     icon: '🌟', name: 'シールあそび',   cat: 'tsukuru' },
@@ -67,6 +68,7 @@ window.GAMES = [
   { id: 'bento',    icon: '🍱', name: 'おべんとう',     cat: 'tsukuru' },
   { id: 'house',    icon: '🏠', name: 'おうちづくり',   cat: 'tsukuru' },
   { id: 'robot',    icon: '🤖', name: 'ロボット',       cat: 'tsukuru' },
+  { id: 'blocks',   icon: '🧱', name: 'つみき',         cat: 'tsukuru' },
   // せいかつ
   { id: 'teeth',    icon: '🪥', name: 'はみがき',       cat: 'seikatsu' },
   { id: 'dress',    icon: '👕', name: 'おきがえ',       cat: 'seikatsu' },
