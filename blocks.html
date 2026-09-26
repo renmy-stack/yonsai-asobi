@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff3e0">
-<link rel="stylesheet" href="common.css?v=202609261636">
-<link rel="stylesheet" href="game.css?v=202609261636">
+<link rel="stylesheet" href="common.css?v=202609261644">
+<link rel="stylesheet" href="game.css?v=202609261644">
 <style>
   body { background: linear-gradient(180deg, #fff3e0 0%, #ffffff 100%); }
 
@@ -37,8 +37,8 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609261636"></script>
-<script src="blocks_sim.js?v=202609261636"></script>
+<script src="common.js?v=202609261644"></script>
+<script src="blocks_sim.js?v=202609261644"></script>
 <script>
 (() => {
   'use strict';
@@ -115,11 +115,11 @@
   // ---------- 描画 ----------
   function drawBody(b) {
     const s = shapeOf.get(b);
-    g.save(); g.translate(sx(b.x), sy(b.y)); g.rotate(b.th); g.scale(scale, scale);
+    g.save(); g.translate(sx(b.x), sy(b.y)); g.rotate(b.th); g.scale(scale, scale); g.translate(b.off.x, b.off.y);
     if (s && s.img && s.crop) g.drawImage(s.img, s.crop.x, s.crop.y, s.crop.w, s.crop.h, s.box.x0, s.box.y0, s.box.w, s.box.h);
     else {
       g.lineWidth = LT * 2; g.lineJoin = 'round'; g.lineCap = 'round'; g.strokeStyle = '#ffb74d'; g.fillStyle = '#ffe0b2';
-      g.beginPath(); b.stroke.forEach((p, i) => i ? g.lineTo(p.x - b.stroke0.x, p.y - b.stroke0.y) : g.moveTo(p.x - b.stroke0.x, p.y - b.stroke0.y)); g.fill(); g.stroke();
+      g.beginPath(); s.pts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.fill(); g.stroke();
     }
     g.restore();
   }
@@ -200,12 +200,16 @@
     const d = state.drag; if (!d || e.pointerId !== d.id) return;
     e.preventDefault();
     d.btn.classList.remove('hold'); state.drag = null;
-    if (state.busy) return;
+    if (state.busy || !d.inField) return;
     const s = SHAPES[d.shape];
-    const x = d.inField ? d.x : T.W / 2, y = d.inField ? d.y : T.dropLineY(state.world) - s.box.h / 2;
+    const x = d.x, y = d.y;
     const stroke = s.pts.map(p => ({ x: Math.round(p.x + x), y: Math.round(p.y + y) }));
     const b = T.addPiece(state.world, T.placeStroke(state.world, stroke));
     b.stroke0 = { x: b.x, y: b.y };
+    // 物の原点は点の平均（重心）。絵と線は 図形の中心（点の外接枠の中心）に合わせるので、そのずれを覚えておく
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const p of b.pts) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+    b.off = { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
     shapeOf.set(b, s);
     showLeft();
   }
