@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ひきざん</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ffe0e0">
+<link rel="stylesheet" href="common.css?v=202609261736">
+<link rel="stylesheet" href="game.css?v=202609261736">
+<style>
+  body { background: linear-gradient(180deg, #ffe0e0 0%, #ffd0c8 100%); }
+  #field {
+    flex: 1; min-height: 0;
+    display: grid; grid-template-rows: 1fr auto; align-items: center; gap: 4px;   /* 上段: ぜんぶ、下段: − B ＝ ? */
+    border-radius: 28px; background: var(--card); box-shadow: 0 6px 0 rgba(0,0,0,.08); padding: 8px;
+  }
+  .group { display: flex; flex-wrap: wrap; align-items: center; align-content: center; justify-content: center; gap: 6px; max-height: 100%; }
+  .thing { position: relative; width: 30%; max-width: 110px; aspect-ratio: 1; transition: opacity .6s, transform .6s; }
+  .thing .face { width: 100%; height: 100%; display: block; }
+  .thing .face img { width: 100%; height: 100%; object-fit: contain; }
+  .thing .face.emoji { display: flex; align-items: center; justify-content: center; font-size: min(12vmin, 56px); }
+  .thing .tag {
+    position: absolute; top: -4px; right: -4px; width: 26px; height: 26px; border-radius: 50%;
+    background: #ff8c42; color: #fff; font-weight: bold; font-size: 15px;
+    display: none; align-items: center; justify-content: center;
+  }
+  .thing.counted .tag { display: flex; }
+  /* いなくなった もの: うすくなって ×（消えたのが分かるように残す） */
+  .thing.gone { opacity: .25; transform: scale(.85); }
+  .thing.gone::after { content: '×'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: min(14vmin, 64px); font-weight: bold; color: #e53935; }
+  .op { font-size: min(12vw, 56px); font-weight: bold; color: #7a2a1a; }
+  .eq { display: flex; align-items: center; justify-content: center; gap: 12px; padding-bottom: 4px; }
+  .ans { width: min(16vw, 72px); height: min(16vw, 72px); border-radius: 16px; background: #fff; display: flex; align-items: center; justify-content: center; font-size: min(10vw, 44px); font-weight: bold; color: #bbb; }
+  .ans.ok { color: #e65100; }
+  #numbers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; height: 20%; }
+  .num { border: none; border-radius: 24px; background: #fff; color: #345; font-size: min(14vw, 64px); font-weight: bold; box-shadow: 0 6px 0 rgba(0,0,0,.12); font-family: inherit; touch-action: none; }
+  .num.ok { background: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="start"><div class="big">➖</div><div>タッチしてね</div></div>
+
+<div id="stage">
+  <div class="question" id="question"></div>
+  <div class="stars" id="stars"></div>
+  <div id="field">
+    <div class="group" id="gA"></div>
+    <div class="eq"><div class="op" id="opA"></div><div class="op">−</div><div class="op" id="opB"></div><div class="op">＝</div><div class="ans" id="ans">?</div></div>
+  </div>
+  <div id="numbers"></div>
+</div>
+
+<button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="replay" class="topbtn right" type="button">🔊</button>
+
+<script src="common.js?v=202609261736"></script>
+<script src="catalog.js?v=202609261736"></script>
+<script>
+(() => {
+  'use strict';
+  const { SFX, say, sayThen, burst, animate, cheer, celebrate, setupStart, setupHome, shuffle, pick } = Baby;
+  const READ = ['', 'いち', 'に', 'さん', 'よん', 'ご', 'ろく'];
+  // いなくなり方は ものごとに: どうぶつは「いなくなった」、のりものは「いっちゃった」、たべものは「たべた」
+  const VERB = { animals: 'いなくなった', vehicles: 'いっちゃった', foods: 'たべた' };
+  const gA = document.getElementById('gA');
+  const ans = document.getElementById('ans'), opA = document.getElementById('opA'), opB = document.getElementById('opB');
+  const numbers = document.getElementById('numbers');
+  const question = document.getElementById('question');
+  const stars = document.getElementById('stars');
+  const state = { a: 0, b: 0, item: null, set: null, counted: 0, busy: false, score: Baby.getLevel() };
+  const cw = (n) => countWord(state.item, n);
+  const verb = () => VERB[state.set.key] || 'いなくなった';
+
+  function ask() {
+    // 「りんごが さんこ。 いっこ たべた。 のこりは なんこ？」
+    say([`${state.item.name}が`, `${cw(state.a)}。`, `${cw(state.b)} ${verb()}。`, 'のこりは', `${COUNTERS[state.item.counter].q}？`]);
+  }
+  function fill(n, gone) {
+    gA.innerHTML = '';
+    for (let i = 0; i < n; i++) {
+      const t = document.createElement('div'); t.className = 'thing';
+      t.appendChild(makeFace(state.set, state.item));
+      const tag = document.createElement('span'); tag.className = 'tag'; t.appendChild(tag);
+      gA.appendChild(t);
+    }
+    // 右はしから gone こが いなくなる（少し間をおいて 消える演出）
+    const things = [...gA.children];
+    setTimeout(() => { for (let i = 0; i < gone; i++) { const t = things[n - 1 - i]; t.classList.add('gone'); } SFX.pop(); }, 900);
+  }
+  function newRound() {
+    state.busy = false; state.counted = 0;
+    const max = [0, 3, 4, 5, 6, 6][Baby.level()];   // 2−1 から 6−5 まで段階的に。こたえは 1 いじょう
+    state.a = 2 + Math.floor(Math.random() * (max - 1));
+    state.b = 1 + Math.floor(Math.random() * (state.a - 1));
+    const p = Baby.fresh('sub', () => pick(allItems()), v => v.item.id);
+    state.set = p.set; state.item = p.item;
+    fill(state.a, state.b);
+    opA.textContent = state.a; opB.textContent = state.b;
+    ans.textContent = '?'; ans.classList.remove('ok');
+    const diff = state.a - state.b;
+    const cand = new Set([diff]);
+    const nc = Baby.level() >= 4 ? 4 : 3;   // レベル4から 4択
+    let tries = 0;
+    while (cand.size < nc) { const sp = tries < 30 ? 2 : 5; cand.add(Math.max(1, Math.min(6, diff + Math.floor(Math.random() * (sp * 2 + 1)) - sp))); tries++; }
+    numbers.style.gridTemplateColumns = `repeat(${nc}, 1fr)`;
+    numbers.innerHTML = '';
+    for (const v of shuffle([...cand])) {
+      const b = document.createElement('button'); b.className = 'num'; b.type = 'button'; b.textContent = v; b.dataset.v = v;
+      numbers.appendChild(b);
+    }
+    question.textContent = `${state.a} − ${state.b} は？`;
+    Baby.prime(['のこりは', `${cw(diff)}！`, 'のこった ものを タッチして かぞえてみよう']);
+    ask();
+  }
+
+  document.getElementById('field').addEventListener('pointerdown', (e) => {
+    const t = e.target.closest('.thing');
+    if (!t || state.busy) return;
+    e.preventDefault();
+    animate(t.querySelector('.face'), 'bounce', 600);
+    if (t.classList.contains('gone')) { SFX.pop(); return; }   // いなくなった ものは 数えない
+    burst(e.clientX, e.clientY, 4);
+    if (t.classList.contains('counted')) { SFX.pop(); return; }
+    state.counted++;
+    t.classList.add('counted');
+    t.querySelector('.tag').textContent = state.counted;
+    SFX.count(state.counted);
+    say(READ[state.counted], { delay: 50 });
+  });
+
+  numbers.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.num');
+    if (!b || state.busy) return;
+    e.preventDefault();
+    const v = Number(b.dataset.v);
+    if (v === state.a - state.b) {
+      state.busy = true;
+      b.classList.add('ok');
+      ans.textContent = v; ans.classList.add('ok');
+      SFX.correct(); cheer('🎉'); celebrate(e.clientX, e.clientY);
+      state.score++; Baby.setLevel(state.score);
+      stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
+      sayThen([Baby.praise(), 'のこりは', `${cw(v)}！`], { delay: 300 }, () => {
+        if (state.score % 5 === 0) Baby.reward().then(newRound); else newRound();
+      }, 800);
+    } else {
+      animate(b, 'shake', 400);
+      SFX.wrong();
+      say([`${READ[v]}じゃないよ。`, 'のこった ものを タッチして かぞえてみよう'], { delay: 200 });
+    }
+  });
+
+  document.getElementById('replay').addEventListener('pointerdown', (e) => { e.preventDefault(); if (!state.busy) ask(); });
+  setupStart(() => setTimeout(newRound, 500));
+  setupHome();
+})();
+</script>
+</body>
+</html>

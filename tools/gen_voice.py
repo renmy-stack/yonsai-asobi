@@ -69,6 +69,11 @@ def phrases():
         P.update(f'{n}と' for n in nums)
         P.update(f'{n}。' for n in nums)
     P.update(f'{n}が' for n in NAMES)
+    # ひきざん: 「りんごが さんこ。 いっこ たべた。 のこりは なんこ？」
+    P.update(['のこりは', 'のこった ものを タッチして かぞえてみよう'])
+    SUB_VERB = {'hiki': 'いなくなった', 'tou': 'いなくなった', 'wa': 'いなくなった', 'dai': 'いっちゃった', 'ki': 'いっちゃった', 'ko': 'たべた', 'hon': 'たべた'}
+    for c, (q, nums) in COUNTERS.items():
+        P.update(f'{n} {SUB_VERB[c]}。' for n in nums)
     # とけい
     P.update(['なんじ かな？', 'あかい みじかい はりを みてね'])
     P.update(f'{c}！' for c in CLOCK)

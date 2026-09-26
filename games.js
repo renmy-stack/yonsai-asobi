@@ -12,6 +12,7 @@ window.GAMES = [
   // かず
   { id: 'count',    icon: '🔢', name: 'かぞえよう',     cat: 'kazu' },
   { id: 'add',      icon: '➕', name: 'たしざん',       cat: 'kazu' },
+  { id: 'sub',      icon: '➖', name: 'ひきざん',       cat: 'kazu' },
   { id: 'number',   icon: '7️⃣', name: 'すうじあて',     cat: 'kazu' },
   { id: 'compare',  icon: '⚖️', name: 'くらべよう',     cat: 'kazu' },
   { id: 'sort',     icon: '📶', name: 'ならべかえ',     cat: 'kazu' },
