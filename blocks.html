@@ -8,12 +8,12 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff3e0">
-<link rel="stylesheet" href="common.css?v=202609261644">
-<link rel="stylesheet" href="game.css?v=202609261644">
+<link rel="stylesheet" href="common.css?v=202609261649">
+<link rel="stylesheet" href="game.css?v=202609261649">
 <style>
   body { background: linear-gradient(180deg, #fff3e0 0%, #ffffff 100%); }
 
-  #left { text-align: center; font-size: 22px; font-weight: bold; color: #e65100; min-height: 30px; }
+  #left { text-align: center; font-size: min(20px, 5vw); font-weight: bold; color: #e65100; min-height: 30px; white-space: nowrap; }
   #field { flex: 1; min-height: 0; position: relative; border-radius: 28px; background: linear-gradient(180deg, #e3f2fd 0%, #f1f8e9 100%); overflow: hidden; touch-action: none; box-shadow: 0 6px 0 rgba(0,0,0,.08); }
   #field canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; }
   /* 下の棚: つみきを選ぶ */
@@ -36,9 +36,10 @@
 </div>
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
+<button id="resetBtn" class="topbtn right" type="button">🔄</button>
 
-<script src="common.js?v=202609261644"></script>
-<script src="blocks_sim.js?v=202609261644"></script>
+<script src="common.js?v=202609261649"></script>
+<script src="blocks_sim.js?v=202609261649"></script>
 <script>
 (() => {
   'use strict';
@@ -79,25 +80,29 @@
   }
 
   // ---------- 状態 ----------
-  const state = { world: T.createWorld(), target: 3, busy: false, score: Baby.getLevel(), drag: null, acc: 0, last: 0, camY: 0, fellAt: -10 };
+  const BEST_KEY = 'asobi-blocks-best';
+  let best = 0; try { best = parseInt(localStorage.getItem(BEST_KEY)) || 0; } catch (_) {}
+  const state = { world: T.createWorld(), counted: 0, busy: false, score: Baby.getLevel(), drag: null, acc: 0, last: 0, camY: 0, fellAt: -10 };
   const shapeOf = new Map();   // 物 → 形
 
-  function win(after) {
+  // 1 こ乗るたびに ⭐ が進み、5 こで シール ＋ レベルアップ（積めた数が そのまま レベルになる）
+  function win() {
     state.score++; Baby.setLevel(state.score);
     stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
-    return (state.score % 5 === 0 ? Baby.reward() : Promise.resolve()).then(after);
+    if (state.score % 5 === 0) { state.busy = true; state.drag = null; return Baby.reward().then(() => { state.busy = false; }); }
+    return Promise.resolve();
   }
-  function newRound() {
-    state.world = T.createWorld(); shapeOf.clear(); state.busy = false; state.camY = 0;
-    state.target = [0, 3, 4, 5, 6, 8][Baby.level()];
+  function newTower() {
+    state.world = T.createWorld(); shapeOf.clear(); state.busy = false; state.camY = 0; state.counted = 0;
     showLeft();
-    Baby.prime(['おっこちた！ もういちど', 'ぜんぶ つめた！ すごい！']);
+    Baby.prime(['おっこちた！ もういちど', 'すごい！']);
     say('つみきを えらんで うえに つもう');
   }
   const stacked = () => state.world.bodies.filter(b => !b.static).length;
   function showLeft() {
-    const n = state.target - stacked();
-    left.textContent = n > 0 ? `あと ${n}こ` : 'つめた！';
+    const n = stacked();
+    if (n > best) { best = n; try { localStorage.setItem(BEST_KEY, String(best)); } catch (_) {} }
+    left.textContent = `つめた ${n}こ　さいこう ${best}こ`;
   }
 
   // ---------- 画面と世界の対応 ----------
@@ -156,16 +161,20 @@
     if (w.lastFell && w.lastFell.length) {
       w.lastFell = null; SFX.pop();
       if (w.t - state.fellAt > 2) { state.fellAt = w.t; say('おっこちた！ もういちど'); }
+      state.counted = Math.min(state.counted, stacked());   // 減ったぶんは 積み直せば また数える
       showLeft();
     }
     // カメラ: タワーが高くなったら 上へ
     const top = T.towerHeight(w, true);
     const want = Math.max(0, top + 230 - (groundPx - 10) / scale);
     state.camY += (want - state.camY) * 0.08;
-    if (!state.busy && w.pieces > 0 && stacked() >= state.target && T.settled(w)) {
-      state.busy = true; state.drag = null;
-      SFX.correct(); cheer('🎉'); celebrate();
-      say('ぜんぶ つめた！ すごい！', { delay: 300 }).then(() => win(() => setTimeout(newRound, 400)));
+    // 止まって 数が増えていたら、増えたぶんだけ ⭐
+    if (!state.busy && w.pieces > 0 && T.settled(w) && stacked() > state.counted) {
+      state.counted++;
+      SFX.correct(); burst(W / 2, groundPx - (T.towerHeight(w) + state.camY) * scale, 6);
+      if (state.counted % 5 === 0) { cheer('🎉'); celebrate(); say('すごい！'); }
+      showLeft();
+      win();
     }
     render();
   }
@@ -217,7 +226,9 @@
   document.addEventListener('pointerup', drop);
   document.addEventListener('pointercancel', drop);
 
-  setupStart(() => setTimeout(newRound, 300));
+  // 🔄 台を空にする（長押し）
+  Baby.holdButton(document.getElementById('resetBtn'), () => { if (state.busy) return; state.drag = null; SFX.pop(); newTower(); });
+  setupStart(() => setTimeout(newTower, 300));
   setupHome();
 })();
 </script>
