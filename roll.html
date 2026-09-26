@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e8f5e9">
-<link rel="stylesheet" href="common.css?v=202609261710">
-<link rel="stylesheet" href="game.css?v=202609261710">
+<link rel="stylesheet" href="common.css?v=202609261717">
+<link rel="stylesheet" href="game.css?v=202609261717">
 <style>
   body { background: linear-gradient(180deg, #e8f5e9 0%, #ffffff 100%); }
 
@@ -39,7 +39,7 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609261710"></script>
+<script src="common.js?v=202609261717"></script>
 <script>
 (() => {
   'use strict';
@@ -110,7 +110,7 @@
   function resetBall() {
     const s = state.stage;
     state.ball = { x: s.ledgeX - (s.left ? 30 : -30), y: s.ledgeY - HT - R - 8, vx: 0, vy: 0, rot: 0 };
-    state.rolling = false; state.stuckT = 0;
+    state.rolling = false; state.stuckT = 0; state.lastN = null;
     go.disabled = false;
   }
   function newRound() {
@@ -185,16 +185,28 @@
       // 速さ: 触れている面それぞれで めり込む向きの速さだけ消す（はねかえりは 1 回）
       gather(b, s);
       const faces = contacts.length ? contacts : [deep];
-      let bounced = false;
+      // 直前も触れていて 面の向きがあまり変わらないなら「ぶつかった」ではなく「面に沿って曲がった」:
+      // 線に沿った速さを保つ（指で描いた線は細かい折れ線なので、折れ目ごとに減速すると ギュッと遅くなって見える）
+      const last = state.lastN;
+      const vtOld = last ? Math.abs(b.vx * -last.ny + b.vy * last.nx) : 0;
+      let bounced = false, follow = false;
       for (const c of faces) {
         const vn = b.vx * c.nx + b.vy * c.ny;
-        if (vn < 0) { const e = bounced ? 0 : E; b.vx -= (1 + e) * vn * c.nx; b.vy -= (1 + e) * vn * c.ny; if (!bounced && vn < -180) SFX.pop(); bounced = true; }
+        if (vn >= 0) continue;
+        if (last && faces.length === 1 && c.nx * last.nx + c.ny * last.ny > 0.7) { b.vx -= vn * c.nx; b.vy -= vn * c.ny; follow = true; }
+        else { const e = bounced ? 0 : E; b.vx -= (1 + e) * vn * c.nx; b.vy -= (1 + e) * vn * c.ny; if (!bounced && vn < -180) SFX.pop(); bounced = true; }
+      }
+      const c = deep, tx = -c.ny, ty = c.nx;
+      if (follow && !bounced) {
+        const vt = b.vx * tx + b.vy * ty;
+        if (Math.abs(vt) > 1e-6 && Math.abs(vt) < vtOld) { const k = vtOld / Math.abs(vt); b.vx = tx * vt * k; b.vy = ty * vt * k; }
       }
       // ころがる: 触れている間は少しずつ遅くなる（1 回だけ）
-      const c = deep, tx = -c.ny, ty = c.nx, vt = b.vx * tx + b.vy * ty, f = vt * 0.04;
+      const vt = b.vx * tx + b.vy * ty, f = vt * 0.004;
       b.vx -= f * tx; b.vy -= f * ty;
       b.rot += vt / R * dt;
-    }
+      state.lastN = { nx: c.nx, ny: c.ny };
+    } else state.lastN = null;
     // 左右のかべ
     if (b.x < R) { b.x = R; b.vx = Math.abs(b.vx) * E; }
     if (b.x > WW - R) { b.x = WW - R; b.vx = -Math.abs(b.vx) * E; }
