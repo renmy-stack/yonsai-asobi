@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e8f5e9">
-<link rel="stylesheet" href="common.css?v=202609261717">
-<link rel="stylesheet" href="game.css?v=202609261717">
+<link rel="stylesheet" href="common.css?v=202609261720">
+<link rel="stylesheet" href="game.css?v=202609261720">
 <style>
   body { background: linear-gradient(180deg, #e8f5e9 0%, #ffffff 100%); }
 
@@ -39,7 +39,7 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609261717"></script>
+<script src="common.js?v=202609261720"></script>
 <script>
 (() => {
   'use strict';
@@ -207,14 +207,11 @@
       b.rot += vt / R * dt;
       state.lastN = { nx: c.nx, ny: c.ny };
     } else state.lastN = null;
-    // 左右のかべ
-    if (b.x < R) { b.x = R; b.vx = Math.abs(b.vx) * E; }
-    if (b.x > WW - R) { b.x = WW - R; b.vx = -Math.abs(b.vx) * E; }
-    if (b.y < R) { b.y = R; b.vy = Math.abs(b.vy) * E; }
+    // 画面のはしに かべは無い（オーナー指摘）。横や下に出たら「おっこちた」。上に飛んでも重力で戻る
     if (!touching) b.rot += b.vx / R * dt;
     // カゴに入った？
     if (b.y > s.by + 6 && b.x > s.bx - 48 && b.x < s.bx + 48 && b.vy >= 0) return 'in';
-    if (b.y > state.WH + R * 2) return 'out';
+    if (b.y > state.WH + R * 2 || b.x < -R * 2 || b.x > WW + R * 2) return 'out';
     // 止まっちゃった？
     if (Math.hypot(b.vx, b.vy) < 8) { state.stuckT += dt; if (state.stuckT > 1.6) return 'stuck'; } else state.stuckT = 0;
     return null;
