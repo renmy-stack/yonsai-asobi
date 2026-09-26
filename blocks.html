@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#fff3e0">
-<link rel="stylesheet" href="common.css?v=202609261649">
-<link rel="stylesheet" href="game.css?v=202609261649">
+<link rel="stylesheet" href="common.css?v=202609261652">
+<link rel="stylesheet" href="game.css?v=202609261652">
 <style>
   body { background: linear-gradient(180deg, #fff3e0 0%, #ffffff 100%); }
 
@@ -29,7 +29,6 @@
 
 <div id="stage">
   <div class="question" id="question">つみきを つもう</div>
-  <div class="stars" id="stars"></div>
   <div id="left"></div>
   <div id="field"><canvas id="cv"></canvas></div>
   <div id="tray"></div>
@@ -38,8 +37,8 @@
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 <button id="resetBtn" class="topbtn right" type="button">🔄</button>
 
-<script src="common.js?v=202609261649"></script>
-<script src="blocks_sim.js?v=202609261649"></script>
+<script src="common.js?v=202609261652"></script>
+<script src="blocks_sim.js?v=202609261652"></script>
 <script>
 (() => {
   'use strict';
@@ -47,7 +46,7 @@
   const { SFX, say, burst, cheer, celebrate, setupStart, setupHome } = Baby;
   const T = DrawTower;
   const field = document.getElementById('field'), cv = document.getElementById('cv'), g = cv.getContext('2d');
-  const tray = document.getElementById('tray'), left = document.getElementById('left'), stars = document.getElementById('stars');
+  const tray = document.getElementById('tray'), left = document.getElementById('left');
   const LT = T.LT;
 
   // ---------- つみきの形（世界の単位。中心が 0,0。線の太さ LT ぶん外側に広がる） ----------
@@ -82,16 +81,10 @@
   // ---------- 状態 ----------
   const BEST_KEY = 'asobi-blocks-best';
   let best = 0; try { best = parseInt(localStorage.getItem(BEST_KEY)) || 0; } catch (_) {}
-  const state = { world: T.createWorld(), counted: 0, busy: false, score: Baby.getLevel(), drag: null, acc: 0, last: 0, camY: 0, fellAt: -10 };
+  const state = { world: T.createWorld(), counted: 0, busy: false, drag: null, acc: 0, last: 0, camY: 0, fellAt: -10 };
   const shapeOf = new Map();   // 物 → 形
 
-  // 1 こ乗るたびに ⭐ が進み、5 こで シール ＋ レベルアップ（積めた数が そのまま レベルになる）
-  function win() {
-    state.score++; Baby.setLevel(state.score);
-    stars.textContent = '⭐'.repeat(((state.score - 1) % 5) + 1);
-    if (state.score % 5 === 0) { state.busy = true; state.drag = null; return Baby.reward().then(() => { state.busy = false; }); }
-    return Promise.resolve();
-  }
+  // レベル・⭐・シールは無し（おえかき と同じ 自由あそび）。数えるだけ
   function newTower() {
     state.world = T.createWorld(); shapeOf.clear(); state.busy = false; state.camY = 0; state.counted = 0;
     showLeft();
@@ -174,7 +167,6 @@
       SFX.correct(); burst(W / 2, groundPx - (T.towerHeight(w) + state.camY) * scale, 6);
       if (state.counted % 5 === 0) { cheer('🎉'); celebrate(); say('すごい！'); }
       showLeft();
-      win();
     }
     render();
   }
