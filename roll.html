@@ -8,8 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#e8f5e9">
-<link rel="stylesheet" href="common.css?v=202609261659">
-<link rel="stylesheet" href="game.css?v=202609261659">
+<link rel="stylesheet" href="common.css?v=202609261710">
+<link rel="stylesheet" href="game.css?v=202609261710">
 <style>
   body { background: linear-gradient(180deg, #e8f5e9 0%, #ffffff 100%); }
 
@@ -39,7 +39,7 @@
 
 <button id="homeBtn" class="topbtn left" type="button">🏠</button>
 
-<script src="common.js?v=202609261659"></script>
+<script src="common.js?v=202609261710"></script>
 <script>
 (() => {
   'use strict';
@@ -141,42 +141,60 @@
   const lineLength = (pts) => { let l = 0; for (let i = 1; i < pts.length; i++) l += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); return l; };
 
   // ---------- 物理（ボール = 円、線 = 太い線分、岩 = 円） ----------
-  function hitSeg(b, ax, ay, bx, by, rad) {
+  // 当たりは 全部集めてから まとめて解く。線分ごとに順番に押し出すと、折れ目や 重なった線で
+  // 押し出し・はねかえり・摩擦が 何重にもかかって ボールが浮いたり ふわふわ落ちたりする（オーナー報告「重力がおかしい」）
+  const contacts = [];
+  function segContact(b, ax, ay, bx, by, rad) {
     const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
     let u = l2 ? ((b.x - ax) * dx + (b.y - ay) * dy) / l2 : 0; u = Math.max(0, Math.min(1, u));
     const qx = ax + dx * u, qy = ay + dy * u, ex = b.x - qx, ey = b.y - qy, d = Math.hypot(ex, ey), pen = rad - d;
-    if (pen <= 0) return false;
-    const nx = d > 1e-6 ? ex / d : 0, ny = d > 1e-6 ? ey / d : -1;
-    b.x += nx * pen; b.y += ny * pen;
-    const vn = b.vx * nx + b.vy * ny;
-    if (vn < 0) { b.vx -= (1 + E) * vn * nx; b.vy -= (1 + E) * vn * ny; if (vn < -180) SFX.pop(); }
-    // ころがる（接している間は少しずつ遅くなる）
-    const tx = -ny, ty = nx, vt = b.vx * tx + b.vy * ty, f = vt * 0.04;
-    b.vx -= f * tx; b.vy -= f * ty;
-    b.rot += vt / R * (1 / 120);
-    return true;
+    if (pen <= 0) return;
+    contacts.push({ nx: d > 1e-6 ? ex / d : 0, ny: d > 1e-6 ? ey / d : -1, pen });
   }
-  function hitCircle(b, c) {
+  function circleContact(b, c) {
     const ex = b.x - c.x, ey = b.y - c.y, d = Math.hypot(ex, ey), pen = R + c.r - d;
     if (pen <= 0) return;
-    const nx = ex / (d || 1), ny = ey / (d || 1);
-    b.x += nx * pen; b.y += ny * pen;
-    const vn = b.vx * nx + b.vy * ny;
-    if (vn < 0) { b.vx -= (1 + E) * vn * nx; b.vy -= (1 + E) * vn * ny; }
+    contacts.push({ nx: ex / (d || 1), ny: ey / (d || 1), pen });
   }
   // 棚は 少しだけ 中央へ傾いている（ボールが自然に転がり出す）
   const LEDGE_A = 0.18, LEDGE_L = 120;
   function ledgeEnds(s) { const a = s.left ? LEDGE_A : -LEDGE_A, c = Math.cos(a) * LEDGE_L / 2, si = Math.sin(a) * LEDGE_L / 2; return [s.ledgeX - c, s.ledgeY - si, s.ledgeX + c, s.ledgeY + si]; }
+  function gather(b, s) {
+    contacts.length = 0;
+    for (const ln of state.lines) for (let i = 1; i < ln.length; i++) segContact(b, ln[i - 1].x, ln[i - 1].y, ln[i].x, ln[i].y, R + HT);
+    segContact(b, ...ledgeEnds(s), R + HT);
+    for (const c of s.rocks) circleContact(b, c);
+    for (const sx of [s.bx - 52, s.bx + 52]) segContact(b, sx, s.by, sx, s.by + 50, R + 4);   // カゴのふち（左右の壁）
+  }
   function stepBall(dt) {
     const b = state.ball, s = state.stage;
     b.vy += G * dt;
+    const sp = Math.hypot(b.vx, b.vy); if (sp > 1800) { b.vx *= 1800 / sp; b.vy *= 1800 / sp; }   // すり抜け防止
     b.x += b.vx * dt; b.y += b.vy * dt;
-    let touching = false;
-    for (const ln of state.lines) for (let i = 1; i < ln.length; i++) if (hitSeg(b, ln[i - 1].x, ln[i - 1].y, ln[i].x, ln[i].y, R + HT)) touching = true;
-    if (hitSeg(b, ...ledgeEnds(s), R + HT)) touching = true;
-    for (const c of s.rocks) hitCircle(b, c);
-    // カゴのふち（左右の壁）
-    for (const sx of [s.bx - 52, s.bx + 52]) hitSeg(b, sx, s.by, sx, s.by + 50, R + 4);
+    // 位置: いちばん深い当たりから押し出す（押し出したら集め直す。最大 4 回）
+    let touching = false, deep = null;
+    for (let it = 0; it < 4; it++) {
+      gather(b, s);
+      if (!contacts.length) break;
+      let c = contacts[0]; for (const k of contacts) if (k.pen > c.pen) c = k;
+      b.x += c.nx * c.pen; b.y += c.ny * c.pen;
+      if (!deep) deep = c;
+      touching = true;
+    }
+    if (touching) {
+      // 速さ: 触れている面それぞれで めり込む向きの速さだけ消す（はねかえりは 1 回）
+      gather(b, s);
+      const faces = contacts.length ? contacts : [deep];
+      let bounced = false;
+      for (const c of faces) {
+        const vn = b.vx * c.nx + b.vy * c.ny;
+        if (vn < 0) { const e = bounced ? 0 : E; b.vx -= (1 + e) * vn * c.nx; b.vy -= (1 + e) * vn * c.ny; if (!bounced && vn < -180) SFX.pop(); bounced = true; }
+      }
+      // ころがる: 触れている間は少しずつ遅くなる（1 回だけ）
+      const c = deep, tx = -c.ny, ty = c.nx, vt = b.vx * tx + b.vy * ty, f = vt * 0.04;
+      b.vx -= f * tx; b.vy -= f * ty;
+      b.rot += vt / R * dt;
+    }
     // 左右のかべ
     if (b.x < R) { b.x = R; b.vx = Math.abs(b.vx) * E; }
     if (b.x > WW - R) { b.x = WW - R; b.vx = -Math.abs(b.vx) * E; }
